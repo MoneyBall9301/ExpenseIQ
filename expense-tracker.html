@@ -475,7 +475,8 @@ mark { background:rgba(56,189,248,0.25); color:var(--accent); border-radius:3px;
   <div class="kpi-grid" id="dash-kpi"></div>
   <div id="dash-backup-banner"></div>
   <div id="dash-health-score"></div>
-  <div id="dash-insights"></div>
+  <div id="dash-flow" style="margin-top:12px"></div>
+  <div id="dash-insights" style="margin-top:12px"></div>
   <div id="dash-weekly-brief"></div>
   <div class="card">
     <div class="card-title">💸 Spending by Category</div>
@@ -1569,8 +1570,10 @@ function renderDashboard() {
   const netSpent=Math.max(spent-receivedBack,0);
   // Non-investment active commitments (rent, subscriptions, etc.) reduce savings
   const nonSipCommits=D.commitments.filter(c=>c.active&&!c.isInvestment).reduce((s,c)=>s+c.amt,0);
-  // Saved = income minus all obligations (using net spent)
-  const net=income-netSpent-invested-nonSipCommits;
+  // Available cash = income minus actual outflows (CC included as real bank deduction)
+  const net=income-netSpent-ccAmt-invested;
+  // Projected surplus after planned commits
+  const projNet=net-nonSipCommits;
 
   document.getElementById('dash-kpi').innerHTML=`
     <div class="kpi" style="--kpi-color:var(--green)">
@@ -1590,15 +1593,17 @@ function renderDashboard() {
       <div class="k-sub">${sipCommits>0?`incl. ${INR(sipCommits)} SIP`:'from expenses'}</div>
     </div>
     <div class="kpi" style="--kpi-color:${net>=0?'var(--green)':'var(--red)'}">
-      <div class="k-label">🏦 Saved</div><div class="k-val">${INR(Math.abs(net))}</div>
-      <div class="k-sub">${net<0?'⚠️ Over budget':'✅ after commits'}</div>
+      <div class="k-label">💵 Available</div><div class="k-val">${INR(Math.abs(net))}</div>
+      <div class="k-sub">${net<0?'⚠️ Overdrawn':'✅ cash left · '+( projNet<0?'⚠️ -'+INR(Math.abs(projNet))+' after commits':'~'+INR(projNet)+' after commits')}</div>
     </div>
     <div class="kpi" style="--kpi-color:var(--yellow)">
       <div class="k-label">⚠️ Avoidable</div><div class="k-val">${INR(avoidable)}</div>
+      <div class="k-sub">${netSpent>0?(avoidable/netSpent*100).toFixed(0)+'% of spending':''}</div>
     </div>
     <div class="kpi" style="--kpi-color:var(--orange)">
       <div class="k-label">💼 Commitments</div>
-      <div class="k-val">${INR(D.commitments.filter(c=>c.active).reduce((s,c)=>s+c.amt,0))}</div>
+      <div class="k-val">${INR(nonSipCommits+sipCommits)}</div>
+      <div class="k-sub">${((nonSipCommits+sipCommits)/income*100).toFixed(0)}% of income</div>
     </div>
     ${(()=>{
       const lim=+(D.settings.spendLimit||0);
@@ -1622,26 +1627,107 @@ function renderDashboard() {
       </div>`;
     })()}`;
 
-  // Insights
-  const ins=[];
+  // ── Money Flow Waterfall ──────────────────────────────────────
+  document.getElementById('dash-flow').innerHTML=`
+    <div class="card" style="padding:14px 16px">
+      <div style="font-weight:600;font-size:13px;color:var(--muted);margin-bottom:10px;letter-spacing:.05em">📊 MONEY FLOW</div>
+      ${[
+        {label:'💰 Income',          amt:income,      color:'var(--green)', sign:''},
+        {label:'💸 Spent',            amt:-netSpent,   color:'var(--red)',   sign:'−'},
+        {label:'💳 CC Payments',      amt:-ccAmt,      color:'var(--blue)',  sign:'−', hide:ccAmt===0},
+        {label:'📈 Invested',         amt:-invested,   color:'var(--purple)',sign:'−'},
+        {label:'💼 Commits (non-SIP)',amt:-nonSipCommits,color:'var(--orange)',sign:'−',hide:nonSipCommits===0},
+      ].filter(r=>!r.hide).map(r=>`
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--surface2)">
+          <span style="font-size:13px;color:var(--text)">${r.label}</span>
+          <span style="font-size:14px;font-weight:600;color:${r.color}">${r.sign}${INR(Math.abs(r.amt))}</span>
+        </div>`).join('')}
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0 2px">
+        <span style="font-size:13px;font-weight:700;color:var(--text)">= Available</span>
+        <span style="font-size:16px;font-weight:700;color:${projNet>=0?'var(--green)':'var(--red)'}">
+          ${projNet>=0?'':'−'}${INR(Math.abs(projNet))}
+        </span>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-top:2px">after all commits · ${projNet>=0?'🟢 Surplus':'🔴 Shortfall this month'}</div>
+    </div>
+  `;
+
+  // ── Warnings Panel ─────────────────────────────────────────────
+  // ── Comprehensive Warnings ─────────────────────────────────────
+  const warns=[]; // {sev:'red'|'yellow'|'green', icon, title, body}
   const _lim=+(D.settings.spendLimit||0);
+  const _warn=+(D.settings.warnAt||80);
+
+  // 1. Spend limit
   if(_lim>0){
-    const _pct=(spent/_lim)*100;
-    const _warn=+(D.settings.warnAt||80);
-    if(spent>_lim) ins.push(`<div class="insight warn">🔴 <strong>Over spend limit!</strong> You've spent ${INR(spent)} — ${INR(spent-_lim)} more than your ${INR(_lim)} limit.</div>`);
-    else if(_pct>=_warn) ins.push(`<div class="insight warn">⚠️ Approaching spend limit — <strong>${_pct.toFixed(0)}%</strong> used (${INR(spent)} of ${INR(_lim)}). ${INR(_lim-spent)} remaining.</div>`);
+    const _pct=(netSpent/_lim)*100;
+    if(netSpent>_lim)
+      warns.push({sev:'red',icon:'🔴',title:'Over Spend Limit',body:`Spent ${INR(netSpent)} vs ${INR(_lim)} limit — ${INR(netSpent-_lim)} over budget.`});
+    else if(_pct>=_warn)
+      warns.push({sev:'yellow',icon:'⚠️',title:'Approaching Spend Limit',body:`${_pct.toFixed(0)}% used (${INR(netSpent)} of ${INR(_lim)}). Only ${INR(_lim-netSpent)} left.`});
   }
-  if(avoidable>0&&income>0) ins.push(`<div class="insight warn">⚠️ <strong>${INR(avoidable)}</strong> (${(avoidable/income*100).toFixed(1)}% of income) spent on avoidable items this month.</div>`);
+
+  // 2. Negative available cash
+  if(net<0)
+    warns.push({sev:'red',icon:'🔴',title:'Overdrawn This Month',body:`You've spent more than you earned. Deficit: ${INR(Math.abs(net))}.`});
+  else if(projNet<0)
+    warns.push({sev:'yellow',icon:'⚠️',title:'Shortfall After Commitments',body:`Available cash (${INR(net)}) is less than planned commitments (${INR(nonSipCommits)}). Projected shortfall: ${INR(Math.abs(projNet))}.`});
+
+  // 3. High CC usage
+  if(income>0&&ccAmt>income*0.20)
+    warns.push({sev:'red',icon:'💳',title:'High Credit Card Bill',body:`CC payment of ${INR(ccAmt)} is ${(ccAmt/income*100).toFixed(0)}% of income. Consider reducing CC reliance.`});
+  else if(income>0&&ccAmt>income*0.12)
+    warns.push({sev:'yellow',icon:'💳',title:'Elevated CC Spending',body:`CC bill is ${(ccAmt/income*100).toFixed(0)}% of income (${INR(ccAmt)}). Keep it below 12% ideally.`});
+
+  // 4. Avoidable spends
+  if(netSpent>0&&avoidable/netSpent>0.35)
+    warns.push({sev:'red',icon:'🚫',title:'Many Avoidable Spends',body:`${(avoidable/netSpent*100).toFixed(0)}% of spending (${INR(avoidable)}) marked avoidable. Review and cut back.`});
+  else if(netSpent>0&&avoidable/netSpent>0.20)
+    warns.push({sev:'yellow',icon:'🚫',title:'Avoidable Spends Rising',body:`${INR(avoidable)} (${(avoidable/netSpent*100).toFixed(0)}% of spending) is avoidable this month.`});
+
+  // 5. High commitment ratio
+  const totalCommits=nonSipCommits+sipCommits;
+  if(income>0&&totalCommits/income>0.75)
+    warns.push({sev:'red',icon:'💼',title:'Commitments Too High',body:`Your fixed obligations (${INR(totalCommits)}) are ${(totalCommits/income*100).toFixed(0)}% of income. This leaves little room for flexibility.`});
+  else if(income>0&&totalCommits/income>0.60)
+    warns.push({sev:'yellow',icon:'💼',title:'Commitments Elevated',body:`Fixed commitments (${INR(totalCommits)}) are ${(totalCommits/income*100).toFixed(0)}% of income. Ideal is below 60%.`});
+
+  // 6. Transaction spike (many small spends)
+  if(mExp.length>40)
+    warns.push({sev:'yellow',icon:'📈',title:'Expense Spike',body:`${mExp.length} transactions this month — unusually high. Check for duplicate or miscategorized entries.`});
+
+  // 7. Low investment rate
+  if(income>0&&invested/income<0.10)
+    warns.push({sev:'yellow',icon:'📉',title:'Low Investment Rate',body:`Investing only ${(invested/income*100).toFixed(0)}% of income (${INR(invested)}). Aim for at least 10-15%.`});
+
+  // 8. Top category insight (always shown as info)
   const catMap={};
-  mExp.filter(e=>!['Self / Bank Transfers'].includes(e.cat)).forEach(e=>{catMap[e.cat]=(catMap[e.cat]||0)+e.amt;});
+  mExp.filter(e=>!EXCL_SPENT.includes(e.cat)).forEach(e=>{catMap[e.cat]=(catMap[e.cat]||0)+e.amt;});
   const top=Object.entries(catMap).sort((a,b)=>b[1]-a[1])[0];
-  if(top) ins.push(`<div class="insight">📊 Top category: <strong>${top[0]}</strong> — ${INR(top[1])}</div>`);
+  if(top) warns.push({sev:'info',icon:'📊',title:'Top Spend Category',body:`${top[0]} — ${INR(top[1])}${netSpent>0?' ('+( top[1]/netSpent*100).toFixed(0)+'% of spending)':''}`});
+
+  // 9. Savings rate
   if(income>0){
-    const sr=((income-spent-invested)/income*100).toFixed(1);
-    ins.push(`<div class="insight ${sr>=20?'good':sr<10?'warn':''}">💰 Savings rate: <strong>${sr}%</strong>${sr>=20?' — Great!':sr<10?' — Aim for 20%+':''}</div>`);
+    const sr=(net/income*100);
+    if(sr>=20) warns.push({sev:'green',icon:'🏆',title:'Excellent Savings Rate',body:`You're saving ${sr.toFixed(0)}% of income (${INR(net)}). Keep it up!`});
+    else if(sr>=10) warns.push({sev:'info',icon:'💰',title:'Savings Rate OK',body:`Saving ${sr.toFixed(0)}% of income. Push toward 20%+ for financial security.`});
+    else if(sr>=0) warns.push({sev:'yellow',icon:'💰',title:'Low Savings Rate',body:`Saving only ${sr.toFixed(0)}% of income (${INR(net)}). Aim for 20%+ before commitments.`});
   }
+
+  const sevColor={red:'#ef4444',yellow:'#f59e0b',green:'#22c55e',info:'var(--blue)'};
+  const sevBg={red:'rgba(239,68,68,0.08)',yellow:'rgba(245,158,11,0.08)',green:'rgba(34,197,94,0.08)',info:'rgba(96,165,250,0.08)'};
   const insEl=document.getElementById('dash-insights');
-  insEl.innerHTML=ins.length?`<div class="card">${ins.join('')}</div>`:'';
+  insEl.innerHTML=warns.length?`<div class="card" style="padding:12px 16px">
+    <div style="font-weight:600;font-size:13px;color:var(--muted);margin-bottom:10px;letter-spacing:.05em">⚡ ALERTS & INSIGHTS (${warns.length})</div>
+    ${warns.map(w=>`
+      <div style="display:flex;gap:10px;align-items:flex-start;padding:8px 10px;margin-bottom:6px;border-radius:10px;background:${sevBg[w.sev]};border-left:3px solid ${sevColor[w.sev]}">
+        <span style="font-size:16px;flex-shrink:0">${w.icon}</span>
+        <div>
+          <div style="font-size:13px;font-weight:600;color:${sevColor[w.sev]};margin-bottom:2px">${w.title}</div>
+          <div style="font-size:12px;color:var(--muted);line-height:1.4">${w.body}</div>
+        </div>
+      </div>`).join('')}
+  </div>`:'<div class="card" style="text-align:center;padding:16px;color:var(--green)">✅ All clear — no warnings this month!</div>';
 
   // ── Backup nag banner ──
   safeRun(renderBackupBanner,'renderBackupBanner');
