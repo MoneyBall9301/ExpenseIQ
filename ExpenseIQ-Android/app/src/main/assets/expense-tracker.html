@@ -1614,9 +1614,9 @@ function renderDashboard() {
       <div class="k-label">📈 Invested</div><div class="k-val">${INR(invested)}</div>
       <div class="k-sub">${sipCommits>0?`incl. ${INR(sipCommits)} SIP`:'from expenses'}</div>
     </div>
-    <div class="kpi" style="--kpi-color:${net>=0?'var(--green)':'var(--red)'}">
-      <div class="k-label">💵 Available</div><div class="k-val">${INR(Math.abs(net))}</div>
-      <div class="k-sub">${net<0?'⚠️ Overdrawn':'✅ cash left · '+( projNet<0?'⚠️ -'+INR(Math.abs(projNet))+' after commits':'~'+INR(projNet)+' after commits')}</div>
+    <div class="kpi" style="--kpi-color:${projNet>=0?'var(--green)':'var(--red)'}">
+      <div class="k-label">💵 Available</div><div class="k-val">${INR(Math.abs(projNet))}</div>
+      <div class="k-sub">${projNet<0?'⚠️ Shortfall after commits':projNet===0?'⚠️ Breaking even':'✅ after all obligations'}</div>
     </div>
     <div class="kpi" style="--kpi-color:var(--yellow)">
       <div class="k-label">⚠️ Avoidable</div><div class="k-val">${INR(avoidable)}</div>
@@ -1693,7 +1693,7 @@ function renderDashboard() {
   if(net<0)
     warns.push({sev:'red',icon:'🔴',title:'Overdrawn This Month',body:`You've spent more than you earned. Deficit: ${INR(Math.abs(net))}.`});
   else if(projNet<0)
-    warns.push({sev:'yellow',icon:'⚠️',title:'Shortfall After Commitments',body:`Available cash (${INR(net)}) is less than planned commitments (${INR(nonSipCommits)}). Projected shortfall: ${INR(Math.abs(projNet))}.`});
+    warns.push({sev:'yellow',icon:'⚠️',title:'Shortfall After Commitments',body:`After CC, investments & commitments you\'re short by ${INR(Math.abs(projNet))}. Pre-commit buffer: ${INR(net)}.`});
 
   // 3. High CC usage
   if(income>0&&ccAmt>income*0.20)
