@@ -254,8 +254,7 @@ textarea { resize:none; min-height:80px; }
 .fhs-subtitle { font-size:11px; color:var(--muted); margin-bottom:10px; }
 .fhs-bars { display:flex; flex-direction:column; gap:5px; }
 .fhs-bar-row { display:flex; align-items:center; gap:7px; }
-.fhs-bar-label { font-size:10px; color:var(--muted); width:68px; flex-shrink:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.fhs-info-btn { font-size:10px; color:var(--muted); flex-shrink:0; cursor:pointer; width:14px; height:14px; border-radius:50%; border:1px solid var(--muted); display:flex; align-items:center; justify-content:center; line-height:1; }
+.fhs-bar-label { font-size:10px; color:var(--muted); width:72px; flex-shrink:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .fhs-bar-track { flex:1; height:5px; background:var(--surface2); border-radius:99px; overflow:hidden; }
 .fhs-bar-fill { height:100%; border-radius:99px; transition:width 0.5s ease; }
 .fhs-bar-pts { font-size:10px; color:var(--muted); width:28px; text-align:right; flex-shrink:0; }
@@ -3344,15 +3343,6 @@ function renderHealthScore() {
   const filled=C*(score/100);
   const dashArr=`${filled.toFixed(1)} ${(C-filled).toFixed(1)}`;
 
-  // Info descriptions for each component
-  const FHS_INFO = {
-    'Savings Rate':    { what:'% of income left after spending & investing. Higher = more financial buffer.', how:'≥20% → 30pts · 10–19% → 15pts · 1–9% → 8pts · negative → 0pts' },
-    'Investment Rate': { what:'% of income going to investments (SIPs, stocks, etc). Building long-term wealth.', how:'≥15% → 25pts · 10–14% → 18pts · 5–9% → 10pts · 1–4% → 5pts · 0% → 0pts' },
-    'Spend Quality':   { what:'How much of your spending is unnecessary. Measures discipline over impulse buys.', how:'0% avoidable → 20pts · ≤5% → 15pts · ≤10% → 10pts · ≤20% → 5pts · >20% → 0pts' },
-    'Budget Control':  { what:'How well you stay within budget targets across spending categories.', how:'All categories on track → 15pts · partial → proportional · no budget set → 10pts baseline' },
-    'Habits':          { what:'Financial hygiene — logging income, setting commitments, keeping data complete.', how:'Income logged → 4pts · commitments set → 3pts · backup done → 3pts' },
-  };
-
   el.innerHTML=`<div class="card fhs-card">
     <div class="fhs-inner">
       <div class="fhs-ring-wrap">
@@ -3371,17 +3361,10 @@ function renderHealthScore() {
         <div class="fhs-subtitle">${month} · out of 100</div>
         <div class="fhs-bars">
           ${components.map((c,i)=>`
-            <div class="fhs-bar-row">
+            <div class="fhs-bar-row" title="${c.note}">
               <span class="fhs-bar-label">${c.label}</span>
-              <span class="fhs-info-btn" onclick="(function(){var d=document.getElementById('fhs-info-${i}');d.style.display=d.style.display==='none'?'block':'none'})()">i</span>
               <div class="fhs-bar-track"><div class="fhs-bar-fill" style="width:${c.pct.toFixed(0)}%;background:${hex}"></div></div>
               <span class="fhs-bar-pts">${c.pts}/${c.max}</span>
-            </div>
-            <div id="fhs-info-${i}" style="display:none;font-size:11px;color:var(--muted);background:var(--surface2);border-radius:8px;padding:7px 9px;margin:-2px 0 4px;line-height:1.5">
-              <div style="color:var(--text);font-weight:600;margin-bottom:3px">${c.label} · ${c.max} pts</div>
-              <div style="margin-bottom:4px">${(FHS_INFO[c.label]||{}).what||''}</div>
-              <div style="color:var(--blue);margin-bottom:4px">📊 Scoring: ${(FHS_INFO[c.label]||{}).how||''}</div>
-              <div style="color:${hex}">📍 This month: ${c.note}</div>
             </div>`).join('')}
         </div>
       </div>
