@@ -1740,10 +1740,6 @@ function renderDashboard() {
       <div class="k-val">${INR(ccAmt||ccPurchases)}</div>
       <div class="k-sub">${ccAmt>0?'bill paid this month':`₹${INR(ccPurchases)} pending bill`}</div>
     </div>`:''}
-    <div class="kpi" style="--kpi-color:var(--purple)">
-      <div class="k-label">📈 Invested</div><div class="k-val">${INR(invested)}</div>
-      <div class="k-sub">${sipCommits>0?`incl. ${INR(sipCommits)} SIP`:'from expenses'}</div>
-    </div>
     <div class="kpi" style="--kpi-color:${projNet>=0?'var(--green)':'var(--red)'}">
       <div class="k-label">💵 Available</div><div class="k-val">${INR(Math.abs(projNet))}</div>
       <div class="k-sub">${projNet<0?'⚠️ Shortfall after commits':projNet===0?'⚠️ Breaking even':'✅ after all obligations'}</div>
@@ -1752,10 +1748,20 @@ function renderDashboard() {
       <div class="k-label">⚠️ Avoidable</div><div class="k-val">${INR(avoidable)}</div>
       <div class="k-sub">${netSpent>0?(avoidable/netSpent*100).toFixed(0)+'% of spending':''}</div>
     </div>
-    <div class="kpi" style="--kpi-color:var(--orange)">
-      <div class="k-label">💼 Commitments</div>
-      <div class="k-val">${INR(nonSipCommits+sipCommits)}</div>
-      <div class="k-sub">${((nonSipCommits+sipCommits)/income*100).toFixed(0)}% of income</div>
+    <div class="kpi" style="grid-column:1/-1;--kpi-color:var(--orange);padding:0;overflow:hidden">
+      <div style="padding:8px 14px 6px;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid var(--surface2)">💼 Commitments</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr">
+        <div style="padding:10px 14px;border-right:1px solid var(--surface2)">
+          <div style="font-size:11px;font-weight:700;color:var(--purple);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px">📈 Investments</div>
+          <div style="font-size:20px;font-weight:800;color:var(--purple)">${INR(invested)}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:3px">${sipCommits>0?INR(sipCommits)+' SIP':investedExp>0?'from expenses':'none set'}</div>
+        </div>
+        <div style="padding:10px 14px">
+          <div style="font-size:11px;font-weight:700;color:var(--orange);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px">🏠 Personal</div>
+          <div style="font-size:20px;font-weight:800;color:var(--orange)">${INR(nonSipCommits)}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:3px">${income>0?(nonSipCommits/income*100).toFixed(0)+'% of income':D.commitments.filter(c=>c.active&&!c.isInvestment).length+' active'}</div>
+        </div>
+      </div>
     </div>
     ${(()=>{
       const cards=D.creditCards||[];
