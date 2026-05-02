@@ -1649,7 +1649,11 @@ function renderDashboard() {
   const mSal=D.salary.filter(s=>s.date&&s.date.startsWith(month));
   // Categories excluded from "spent" — they are tracked separately
   const EXCL_SPENT=['Investments / SIP','Self / Bank Transfers','Credit Card Payments'];
-  const spent=mExp.filter(e=>!EXCL_SPENT.includes(e.cat)).reduce((s,e)=>s+e.amt,0);
+  // CC purchases (txtype='credit_card') are also excluded from spent —
+  // they will be captured as a cash outflow when the CC bill is paid next month.
+  // This avoids double-counting: purchase ₹X in month A + CC payment ₹X in month B.
+  const spent=mExp.filter(e=>!EXCL_SPENT.includes(e.cat)&&e.txtype!=='credit_card').reduce((s,e)=>s+e.amt,0);
+  const ccPurchases=mExp.filter(e=>!EXCL_SPENT.includes(e.cat)&&e.txtype==='credit_card').reduce((s,e)=>s+e.amt,0);
   const ccAmt=mExp.filter(e=>e.cat==='Credit Card Payments').reduce((s,e)=>s+e.amt,0);
   const investedExp=mExp.filter(e=>e.cat==='Investments / SIP').reduce((s,e)=>s+e.amt,0);
   // Investment-flagged commitments also count as invested (if not already logged as expense)
@@ -1661,7 +1665,9 @@ function renderDashboard() {
   const receivedBack=D.splits.filter(s=>s.received&&s.receivedDate&&s.receivedDate.startsWith(month)).reduce((s,x)=>s+x.amt,0);
   const netSpent=Math.max(spent-receivedBack,0);
   // Non-investment active commitments (rent, subscriptions, etc.) reduce savings
-  const nonSipCommits=D.commitments.filter(c=>c.active&&!c.isInvestment).reduce((s,c)=>s+c.amt,0);
+  // Exclude any that were already logged as expenses this month (avoid double-counting)
+  const loggedCommitIds=new Set(mExp.filter(e=>e._commitId).map(e=>e._commitId));
+  const nonSipCommits=D.commitments.filter(c=>c.active&&!c.isInvestment&&!loggedCommitIds.has(c.id)).reduce((s,c)=>s+c.amt,0);
   // Available cash = income minus actual outflows (CC included as real bank deduction)
   const net=income-netSpent-ccAmt-invested;
   // Projected surplus after planned commits
@@ -1676,9 +1682,10 @@ function renderDashboard() {
       <div class="k-label">💸 Spent</div><div class="k-val">${INR(netSpent)}</div>
       <div class="k-sub">${receivedBack>0?INR(spent)+' - '+INR(receivedBack)+' splits = net · ':''}${mExp.length} txns</div>
     </div>
-    ${ccAmt>0?`<div class="kpi" style="--kpi-color:var(--blue)">
-      <div class="k-label">💳 CC Payments</div><div class="k-val">${INR(ccAmt)}</div>
-      <div class="k-sub">excluded from spent</div>
+    ${(ccAmt>0||ccPurchases>0)?`<div class="kpi" style="--kpi-color:var(--blue)">
+      <div class="k-label">💳 Credit Card</div>
+      <div class="k-val">${INR(ccAmt||ccPurchases)}</div>
+      <div class="k-sub">${ccAmt>0?'bill paid this month':`₹${INR(ccPurchases)} pending bill`}</div>
     </div>`:''}
     <div class="kpi" style="--kpi-color:var(--purple)">
       <div class="k-label">📈 Invested</div><div class="k-val">${INR(invested)}</div>
@@ -1725,11 +1732,16 @@ function renderDashboard() {
       <div style="font-weight:600;font-size:13px;color:var(--muted);margin-bottom:10px;letter-spacing:.05em">📊 MONEY FLOW</div>
       ${[
         {label:'💰 Income',          amt:income,      color:'var(--green)', sign:''},
-        {label:'💸 Spent',            amt:-netSpent,   color:'var(--red)',   sign:'−'},
-        {label:'💳 CC Payments',      amt:-ccAmt,      color:'var(--blue)',  sign:'−', hide:ccAmt===0},
+        {label:'💸 Spent (cash)',      amt:-netSpent,   color:'var(--red)',   sign:'−'},
+        {label:'💳 CC Purchases',    amt:ccPurchases, color:'var(--muted)', sign:'', hide:ccPurchases===0, info:true},
+        {label:'💳 CC Bill Paid',      amt:-ccAmt,      color:'var(--blue)',  sign:'−', hide:ccAmt===0},
         {label:'📈 Invested',         amt:-invested,   color:'var(--purple)',sign:'−'},
         {label:'💼 Commits (non-SIP)',amt:-nonSipCommits,color:'var(--orange)',sign:'−',hide:nonSipCommits===0},
-      ].filter(r=>!r.hide).map(r=>`
+      ].filter(r=>!r.hide).map(r=>r.info?`
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px dashed var(--surface2);opacity:0.7">
+          <span style="font-size:12px;color:var(--muted)">${r.label} <span style="font-size:10px">(pending bill)</span></span>
+          <span style="font-size:12px;color:var(--muted)">${INR(Math.abs(r.amt))}</span>
+        </div>` : `
         <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--surface2)">
           <span style="font-size:13px;color:var(--text)">${r.label}</span>
           <span style="font-size:14px;font-weight:600;color:${r.color}">${r.sign}${INR(Math.abs(r.amt))}</span>
@@ -1962,7 +1974,7 @@ function saveExpense(ev) {
   const _sl=+(D.settings.spendLimit||0);
   if(_sl>0){
     const _curMonth=new Date().toISOString().slice(0,7);
-    const _spent=D.expenses.filter(e=>e.date&&e.date.startsWith(_curMonth)&&!['Investments / SIP','Self / Bank Transfers'].includes(e.cat)).reduce((s,e)=>s+e.amt,0);
+    const _spent=D.expenses.filter(e=>e.date&&e.date.startsWith(_curMonth)&&!['Investments / SIP','Self / Bank Transfers','Credit Card Payments'].includes(e.cat)&&e.txtype!=='credit_card').reduce((s,e)=>s+e.amt,0);
     const _pct=(_spent/_sl)*100;
     const _warn=+(D.settings.warnAt||80);
     if(_spent>_sl) toast(`🔴 Over limit! Spent ${INR(_spent)} of ${INR(_sl)} limit`,'err');
@@ -2779,13 +2791,16 @@ function renderBudget() {
   // True available — mirrors dashboard formula so Savings bucket stays consistent
   const _mExp    = D.expenses.filter(e => e.date && e.date.startsWith(month));
   const _EXCL    = ['Investments / SIP','Self / Bank Transfers','Credit Card Payments'];
-  const _netSpent= Math.max(_mExp.filter(e=>!_EXCL.includes(e.cat)).reduce((s,e)=>s+e.amt,0)
+  // Bug 1 fix: exclude already-logged commitments from nonSip (avoid double-count)
+  const _loggedCIds=new Set(_mExp.filter(e=>e._commitId).map(e=>e._commitId));
+  // Bug 2 fix: CC purchases excluded from spent (captured when CC bill paid)
+  const _netSpent= Math.max(_mExp.filter(e=>!_EXCL.includes(e.cat)&&e.txtype!=='credit_card').reduce((s,e)=>s+e.amt,0)
                    - D.splits.filter(s=>s.received&&s.receivedDate&&s.receivedDate.startsWith(month)).reduce((s,x)=>s+x.amt,0), 0);
   const _ccAmt   = _mExp.filter(e=>e.cat==='Credit Card Payments').reduce((s,e)=>s+e.amt,0);
   const _sipC    = D.commitments.filter(c=>c.active&&c.isInvestment).reduce((s,c)=>s+c.amt,0);
   const _invExp  = _mExp.filter(e=>e.cat==='Investments / SIP').reduce((s,e)=>s+e.amt,0);
   const _invested= _invExp + _sipC;
-  const _nonSip  = D.commitments.filter(c=>c.active&&!c.isInvestment).reduce((s,c)=>s+c.amt,0);
+  const _nonSip  = D.commitments.filter(c=>c.active&&!c.isInvestment&&!_loggedCIds.has(c.id)).reduce((s,c)=>s+c.amt,0);
   const trueAvail= income - _netSpent - _ccAmt - _invested - _nonSip;
 
   // Income display
