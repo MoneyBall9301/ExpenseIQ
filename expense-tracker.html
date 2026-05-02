@@ -1616,7 +1616,10 @@ function renderWeeklyBrief() {
     return d >= from && d <= to;
   };
 
-  const spending = e => !['Investments / SIP','Self / Bank Transfers'].includes(e.cat);
+  // Same exclusion logic as dashboard — personal discretionary only
+  const spending = e => !['Investments / SIP','Self / Bank Transfers','Credit Card Payments'].includes(e.cat)
+    && e.txtype !== 'credit_card'
+    && !e._commitId;
 
   const thisWeekExp = D.expenses.filter(e => inRange(e, mon, sun) && spending(e));
   const prevWeekExp = D.expenses.filter(e => inRange(e, prevMon, prevSun) && spending(e));
@@ -1888,7 +1891,7 @@ function renderDashboard() {
 
   // 8. Top category insight (always shown as info)
   const catMap={};
-  mExp.filter(e=>!EXCL_SPENT.includes(e.cat)).forEach(e=>{catMap[e.cat]=(catMap[e.cat]||0)+e.amt;});
+  mExp.filter(e=>!EXCL_SPENT.includes(e.cat)&&e.txtype!=='credit_card'&&!e._commitId).forEach(e=>{catMap[e.cat]=(catMap[e.cat]||0)+e.amt;});
   const top=Object.entries(catMap).sort((a,b)=>b[1]-a[1])[0];
   if(top) warns.push({sev:'info',icon:'📊',title:'Top Spend Category',body:`${top[0]} — ${INR(top[1])}${netSpent>0?' ('+( top[1]/netSpent*100).toFixed(0)+'% of spending)':''}`});
 
