@@ -254,7 +254,8 @@ textarea { resize:none; min-height:80px; }
 .fhs-subtitle { font-size:11px; color:var(--muted); margin-bottom:10px; }
 .fhs-bars { display:flex; flex-direction:column; gap:5px; }
 .fhs-bar-row { display:flex; align-items:center; gap:7px; }
-.fhs-bar-label { font-size:10px; color:var(--muted); width:72px; flex-shrink:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.fhs-bar-label { font-size:10px; color:var(--muted); width:68px; flex-shrink:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.fhs-info-btn { font-size:10px; color:var(--muted); flex-shrink:0; cursor:pointer; width:14px; height:14px; border-radius:50%; border:1px solid var(--muted); display:flex; align-items:center; justify-content:center; line-height:1; }
 .fhs-bar-track { flex:1; height:5px; background:var(--surface2); border-radius:99px; overflow:hidden; }
 .fhs-bar-fill { height:100%; border-radius:99px; transition:width 0.5s ease; }
 .fhs-bar-pts { font-size:10px; color:var(--muted); width:28px; text-align:right; flex-shrink:0; }
@@ -3371,11 +3372,8 @@ function renderHealthScore() {
         <div class="fhs-bars">
           ${components.map((c,i)=>`
             <div class="fhs-bar-row">
-              <span class="fhs-bar-label" style="display:flex;align-items:center;gap:3px">
-                ${c.label}
-                <span onclick="(function(){var d=document.getElementById('fhs-info-${i}');d.style.display=d.style.display==='none'?'block':'none'})()"
-                  style="cursor:pointer;font-size:11px;color:var(--muted);flex-shrink:0;line-height:1;padding:1px 3px;border-radius:50%;border:1px solid var(--muted)">i</span>
-              </span>
+              <span class="fhs-bar-label">${c.label}</span>
+              <span class="fhs-info-btn" onclick="(function(){var d=document.getElementById('fhs-info-${i}');d.style.display=d.style.display==='none'?'block':'none'})()">i</span>
               <div class="fhs-bar-track"><div class="fhs-bar-fill" style="width:${c.pct.toFixed(0)}%;background:${hex}"></div></div>
               <span class="fhs-bar-pts">${c.pts}/${c.max}</span>
             </div>
