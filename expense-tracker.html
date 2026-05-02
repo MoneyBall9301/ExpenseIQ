@@ -801,6 +801,28 @@ mark { background:rgba(56,189,248,0.25); color:var(--accent); border-radius:3px;
 
 
 <!-- PROJECT ITEM bottom sheet -->
+<div class="bottom-sheet" id="sheet-proj-fund">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header">
+    <span class="sheet-title" id="proj-fund-title">Update Allocation</span>
+    <button class="sheet-close" onclick="closeSheet(true)">✕</button>
+  </div>
+  <input type="hidden" id="proj-fund-proj-id">
+  <input type="hidden" id="proj-fund-item-id">
+  <div class="sheet-body">
+    <div style="font-size:13px;color:var(--muted);margin-bottom:12px" id="proj-fund-subtitle"></div>
+    <div class="form-row">
+      <label>Allocated So Far (₹)</label>
+      <input type="number" id="proj-fund-allocated" placeholder="0" inputmode="numeric">
+      <div style="font-size:11px;color:var(--muted);margin-top:4px">Enter total amount allocated so far (not just the new addition).</div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-ghost" onclick="closeSheet(true)">Cancel</button>
+      <button class="btn btn-primary" onclick="saveProjFund()">Update</button>
+    </div>
+  </div>
+</div>
+
 <div class="bottom-sheet" id="sheet-proj-item">
   <div class="sheet-handle"></div>
   <div class="sheet-header">
@@ -2665,6 +2687,7 @@ function renderProjects() {
                 ${item.notes?`<div style="font-size:11px;color:var(--muted)">${item.notes}</div>`:''}
               </div>
               <div style="font-size:12px;font-weight:700;color:${id2?'var(--green)':col}">${ip.toFixed(0)}%</div>
+              <button class="btn btn-primary btn-sm" style="padding:3px 8px;font-size:11px" onclick="openProjFundSheet('${p.id}','${item.id}')">💰 Fund</button>
               <button class="btn btn-ghost btn-sm" style="padding:3px 8px;font-size:11px" onclick="openProjItemSheet('${p.id}','${item.id}')">Edit</button>
               <button class="btn btn-ghost btn-sm" style="padding:3px 8px;font-size:11px;color:var(--red)" onclick="deleteProjItem('${p.id}','${item.id}')">✕</button>
             </div>
@@ -2751,6 +2774,29 @@ function deleteProject(id){
   if(!confirm('Delete this project and all its expenses?')) return;
   D.projects=D.projects.filter(p=>p.id!==id);
   save(); safeRun(renderProjects,'renderProjects'); toast('🗑️ Project deleted');
+}
+
+function openProjFundSheet(projId, itemId) {
+  const p = D.projects.find(x=>x.id===projId); if(!p) return;
+  const item = p.items.find(i=>i.id===itemId); if(!item) return;
+  document.getElementById('proj-fund-title').textContent = '💰 Fund: ' + item.name;
+  document.getElementById('proj-fund-subtitle').textContent =
+    'Required: ' + INR(item.required) + '  ·  Currently allocated: ' + INR(item.allocated);
+  document.getElementById('proj-fund-proj-id').value = projId;
+  document.getElementById('proj-fund-item-id').value = itemId;
+  document.getElementById('proj-fund-allocated').value = item.allocated || '';
+  openSheet('sheet-proj-fund');
+}
+
+function saveProjFund() {
+  const projId = document.getElementById('proj-fund-proj-id').value;
+  const itemId = document.getElementById('proj-fund-item-id').value;
+  const newAlloc = +(document.getElementById('proj-fund-allocated').value || 0);
+  const p = D.projects.find(x=>x.id===projId); if(!p) return;
+  const item = p.items.find(i=>i.id===itemId); if(!item) return;
+  item.allocated = newAlloc;
+  save(); closeSheet(true); safeRun(renderProjects,'renderProjects');
+  toast('✅ Allocation updated — ' + INR(newAlloc) + ' / ' + INR(item.required));
 }
 
 function openProjItemSheet(projId, itemId){
