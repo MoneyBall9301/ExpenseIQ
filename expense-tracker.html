@@ -112,7 +112,7 @@ body.sheet-open .sheet-overlay { pointer-events:none !important; }
 .sheet-overlay.show { display:block; opacity:1; }
 .bottom-sheet {
   position:fixed; left:0; right:0; bottom:0;
-  background:#1e3a5f; border-radius:20px 20px 0 0;
+  background:#1e293b; border-radius:20px 20px 0 0;
   z-index:500; transform:translateY(100%);
   transition:transform 0.3s cubic-bezier(0.32,0.72,0,1);
   max-height:92vh; display:flex; flex-direction:column;
@@ -125,7 +125,7 @@ body.sheet-open .sheet-overlay { pointer-events:none !important; }
 }
 .sheet-header {
   display:flex; align-items:center; justify-content:space-between;
-  padding:14px 16px 10px; border-bottom:1px solid #2d5a8e;
+  padding:14px 16px 10px; border-bottom:1px solid var(--border);
 }
 .sheet-title { font-size:16px; font-weight:700; color:var(--text); }
 .sheet-close {
@@ -160,19 +160,20 @@ body.sheet-open .sheet-overlay { pointer-events:none !important; }
 
 /* ── FORMS ── */
 .form-row { display:flex; flex-direction:column; gap:6px; margin-bottom:14px; }
-.form-row label { font-size:12px; font-weight:700; color:#cbd5e1; text-transform:uppercase; letter-spacing:0.4px; }
+.form-row label { font-size:12px; font-weight:700; color:var(--text); text-transform:uppercase; letter-spacing:0.4px; }
 input, select, textarea {
-  background:#1e3a5f; border:1.5px solid #4f86c0;
-  border-radius:10px; color:var(--text);
+  background:#f1f5f9; border:2px solid #94a3b8;
+  border-radius:10px; color:#0f172a;
   padding:12px 14px; font-size:16px;
   font-family:inherit; outline:none; width:100%;
   transition:border-color 0.2s, box-shadow 0.2s;
 }
 input:focus, select:focus, textarea:focus {
   border-color:var(--accent);
-  box-shadow:0 0 0 3px rgba(56,189,248,0.18);
+  box-shadow:0 0 0 3px rgba(56,189,248,0.22);
 }
-select option { background:#1e293b; }
+input::placeholder, textarea::placeholder { color:#64748b; }
+select option { background:#f1f5f9; color:#0f172a; }
 textarea { resize:none; min-height:80px; }
 
 /* ── BUTTONS ── */
