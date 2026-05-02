@@ -1810,6 +1810,12 @@ function renderDashboard() {
   const net=income-netSpent-ccAmt-invested;
   // Projected surplus after planned commits
   const projNet=net-nonSipCommits;
+  // Projects summary (safe — guard against items being undefined)
+  const _projs=D.projects||[];
+  const projCount=_projs.length;
+  const projTotalReq=_projs.reduce((s,p)=>s+(p.items||[]).reduce((ss,i)=>ss+(i.required||0),0),0);
+  const projTotalAlloc=_projs.reduce((s,p)=>s+(p.items||[]).reduce((ss,i)=>ss+(i.allocated||0),0),0);
+  const projPct=projTotalReq>0?Math.min(projTotalAlloc/projTotalReq*100,100):0;
 
   document.getElementById('dash-kpi').innerHTML=`
     <div class="kpi" style="--kpi-color:var(--green)">
@@ -1833,17 +1839,11 @@ function renderDashboard() {
       <div class="k-label">⚠️ Avoidable</div><div class="k-val">${INR(avoidable)}</div>
       <div class="k-sub">${netSpent>0?(avoidable/netSpent*100).toFixed(0)+'% of spending':avoidable===0?'none this month':''}</div>
     </div>
-    ${(()=>{
-      const projs=D.projects||[];
-      const totalReq=projs.reduce((s,p)=>s+p.items.reduce((ss,i)=>ss+i.required,0),0);
-      const totalAlloc=projs.reduce((s,p)=>s+p.items.reduce((ss,i)=>ss+i.allocated,0),0);
-      const pct=totalReq>0?Math.min(totalAlloc/totalReq*100,100):0;
-      return `<div class="kpi" style="--kpi-color:#fbbf24">
-        <div class="k-label">🎯 Projects</div>
-        <div class="k-val">${projs.length}</div>
-        <div class="k-sub">${totalReq>0?INR(totalAlloc)+' / '+INR(totalReq)+' ('+pct.toFixed(0)+'%)':'no goals set'}</div>
-      </div>`;
-    })()}
+    <div class="kpi" style="--kpi-color:#fbbf24">
+      <div class="k-label">🎯 Projects</div>
+      <div class="k-val">${projCount}</div>
+      <div class="k-sub">${projTotalReq>0?INR(projTotalAlloc)+' / '+INR(projTotalReq)+' ('+projPct.toFixed(0)+'%)':'no goals set'}</div>
+    </div>
     <div class="kpi" style="grid-column:1/-1;--kpi-color:var(--orange);padding:0;overflow:hidden">
       <div style="padding:8px 14px 6px;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid var(--surface2)">💼 Commitments</div>
       <div style="display:grid;grid-template-columns:1fr 1fr">
@@ -4262,9 +4262,4 @@ function runSearch(raw) {
       type:'rem', icon: r.type==='task'?'✅':r.type==='upcoming'?'💸':'🔔',
       title: r.title, sub: r.date ? `Due ${fmtDate(r.date)}` : 'No due date',
       amt: r.amt ? INR(r.amt) : '', amtClass:'txt-yellow',
-      secLabel:'Reminder', secClass:'rs-rem',
-      action: ()=>{ closeSearch(); goTab('reminders'); }
-    });
-  });
-
-  D.splits.forEach(
+      secLabel:'Reminder', secCl
