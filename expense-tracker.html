@@ -1540,9 +1540,17 @@ function goTab(id) {
 //  BOTTOM SHEETS
 // ════════════════════════════════════════════
 let activeSheet = null;
+// Track the viewport height when no keyboard is open
+let _baseViewH = window.innerHeight;
+window.addEventListener('resize', () => {
+  // Only update base height when keyboard is NOT open (height increased or no sheet open)
+  if (window.innerHeight > _baseViewH || !activeSheet) _baseViewH = window.innerHeight;
+});
+
 function overlayClose() {
-  // On Android, keyboard open fires ghost touches on the overlay.
-  // If any sheet input is focused, just dismiss keyboard — don't close sheet.
+  // Android ghost-tap guard: if viewport has shrunk by >120px, keyboard is open — ignore tap
+  if (_baseViewH - window.innerHeight > 120) return;
+  // If a sheet input is focused, just dismiss keyboard — don't close sheet
   const a = document.activeElement;
   if (a && a.closest && a.closest('.bottom-sheet')) { a.blur(); return; }
   closeSheet();
@@ -1552,10 +1560,17 @@ function openSheet(id) {
   activeSheet = id;
   const ov = document.getElementById('sheet-overlay');
   ov.classList.add('show');
-  // Block overlay immediately on open
+  // Block overlay briefly so the open-tap itself doesn't immediately close it
   ov.style.pointerEvents = 'none';
-  setTimeout(() => { ov.style.pointerEvents = ''; }, 600);
-  document.getElementById(id).classList.add('show');
+  setTimeout(() => { ov.style.pointerEvents = ''; }, 400);
+  const sheetEl = document.getElementById(id);
+  sheetEl.classList.add('show');
+  // Stop sheet touches from bubbling to overlay
+  if (!sheetEl._stopPropSet) {
+    sheetEl.addEventListener('touchstart', e => e.stopPropagation(), {passive:true});
+    sheetEl.addEventListener('click', e => e.stopPropagation());
+    sheetEl._stopPropSet = true;
+  }
 }
 function closeSheet() {
   document.querySelectorAll('.bottom-sheet.show').forEach(s=>s.classList.remove('show'));
