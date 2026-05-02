@@ -3030,12 +3030,13 @@ function calcFinanceScore(month) {
   else{
     let over=0,near=0,ok=0;
     BUDGET_BUCKETS.forEach(b=>{
+      if(!b.cats||b.isCalc||b.isCommits) return; // skip derived buckets
       const pct=+(D.budget?.targets?.[b.id]||0); if(!pct) return;
       const tAmt=income*pct/100;
       const actual=b.cats.reduce((s,cat)=>s+mExp.filter(e=>e.cat===cat).reduce((a,e)=>a+e.amt,0),0);
       if(actual>tAmt) over++; else if(tAmt>0&&actual/tAmt>=0.85) near++; else ok++;
     });
-    if(over===0){budgPts=over===0&&near<=1?15:12;budgNote=`All ${ok+near} buckets in check`;}
+    if(over===0){budgPts=near<=1?15:12;budgNote=`All ${ok+near} buckets in check`;}
     else if(over===1){budgPts=10;budgNote=`1 bucket over budget`;}
     else if(over===2){budgPts=6;budgNote=`${over} buckets over budget`;}
     else{budgPts=2;budgNote=`${over} buckets over budget`;}
