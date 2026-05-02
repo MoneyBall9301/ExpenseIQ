@@ -795,53 +795,7 @@ mark { background:rgba(56,189,248,0.25); color:var(--accent); border-radius:3px;
   <div id="proj-list"></div>
 </div>
 
-<!-- PROJECT bottom sheet -->
-<div class="bottom-sheet" id="sheet-project">
-  <div class="sheet-handle"></div>
-  <div class="sheet-header">
-    <span class="sheet-title" id="proj-sheet-title">New Project</span>
-    <button class="sheet-close" onclick="closeSheet(true)">✕</button>
-  </div>
-  <input type="hidden" id="proj-edit-id">
-  <div class="sheet-body">
-    <div class="form-row">
-      <label>Project Name</label>
-      <input type="text" id="proj-name" placeholder="e.g. Marriage, Car, Masters…">
-    </div>
-    <div class="form-row" style="display:flex;gap:10px">
-      <div style="flex:1">
-        <label>Emoji</label>
-        <input type="text" id="proj-emoji" placeholder="🎯" maxlength="2" style="text-align:center;font-size:20px">
-      </div>
-      <div style="flex:2">
-        <label>Target Date</label>
-        <input type="month" id="proj-deadline">
-      </div>
-    </div>
-    <div class="form-row">
-      <label>Color</label>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button type="button" onclick="setProjColor('#6366f1')" style="width:32px;height:32px;border-radius:50%;background:#6366f1;border:2px solid transparent" id="pc-indigo"></button>
-        <button type="button" onclick="setProjColor('#22c55e')" style="width:32px;height:32px;border-radius:50%;background:#22c55e;border:2px solid transparent" id="pc-green"></button>
-        <button type="button" onclick="setProjColor('#f59e0b')" style="width:32px;height:32px;border-radius:50%;background:#f59e0b;border:2px solid transparent" id="pc-amber"></button>
-        <button type="button" onclick="setProjColor('#ef4444')" style="width:32px;height:32px;border-radius:50%;background:#ef4444;border:2px solid transparent" id="pc-red"></button>
-        <button type="button" onclick="setProjColor('#3b82f6')" style="width:32px;height:32px;border-radius:50%;background:#3b82f6;border:2px solid transparent" id="pc-blue"></button>
-        <button type="button" onclick="setProjColor('#ec4899')" style="width:32px;height:32px;border-radius:50%;background:#ec4899;border:2px solid transparent" id="pc-pink"></button>
-        <button type="button" onclick="setProjColor('#14b8a6')" style="width:32px;height:32px;border-radius:50%;background:#14b8a6;border:2px solid transparent" id="pc-teal"></button>
-        <button type="button" onclick="setProjColor('#f97316')" style="width:32px;height:32px;border-radius:50%;background:#f97316;border:2px solid transparent" id="pc-orange"></button>
-      </div>
-      <input type="hidden" id="proj-color" value="#6366f1">
-    </div>
-    <div class="form-row">
-      <label>Notes (optional)</label>
-      <input type="text" id="proj-notes" placeholder="Any notes about this project…">
-    </div>
-    <div class="btn-row">
-      <button class="btn btn-ghost" onclick="closeSheet(true)">Cancel</button>
-      <button class="btn btn-primary" onclick="saveProject()">Save Project</button>
-    </div>
-  </div>
-</div>
+
 
 <!-- PROJECT ITEM bottom sheet -->
 <div class="bottom-sheet" id="sheet-proj-item">
@@ -948,7 +902,11 @@ mark { background:rgba(56,189,248,0.25); color:var(--accent); border-radius:3px;
   </button>
 </nav>
 
-<!-- CC CARD SHEET -->
+
+
+<!-- SHEET OVERLAY -->
+<div class="sheet-overlay" id="sheet-overlay"></div>
+
 <div class="bottom-sheet" id="sheet-cc-card">
   <div class="sheet-handle"></div>
   <div class="sheet-header">
@@ -983,8 +941,52 @@ mark { background:rgba(56,189,248,0.25); color:var(--accent); border-radius:3px;
   </div>
 </div>
 
-<!-- SHEET OVERLAY -->
-<div class="sheet-overlay" id="sheet-overlay"></div>
+<div class="bottom-sheet" id="sheet-project">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header">
+    <span class="sheet-title" id="proj-sheet-title">New Project</span>
+    <button class="sheet-close" onclick="closeSheet(true)">✕</button>
+  </div>
+  <input type="hidden" id="proj-edit-id">
+  <div class="sheet-body">
+    <div class="form-row">
+      <label>Project Name</label>
+      <input type="text" id="proj-name" placeholder="e.g. Marriage, Car, Masters…">
+    </div>
+    <div class="form-row" style="display:flex;gap:10px">
+      <div style="flex:1">
+        <label>Emoji</label>
+        <input type="text" id="proj-emoji" placeholder="🎯" maxlength="2" style="text-align:center;font-size:20px">
+      </div>
+      <div style="flex:2">
+        <label>Target Date</label>
+        <input type="month" id="proj-deadline">
+      </div>
+    </div>
+    <div class="form-row">
+      <label>Color</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button type="button" onclick="setProjColor('#6366f1')" style="width:32px;height:32px;border-radius:50%;background:#6366f1;border:2px solid transparent" id="pc-indigo"></button>
+        <button type="button" onclick="setProjColor('#22c55e')" style="width:32px;height:32px;border-radius:50%;background:#22c55e;border:2px solid transparent" id="pc-green"></button>
+        <button type="button" onclick="setProjColor('#f59e0b')" style="width:32px;height:32px;border-radius:50%;background:#f59e0b;border:2px solid transparent" id="pc-amber"></button>
+        <button type="button" onclick="setProjColor('#ef4444')" style="width:32px;height:32px;border-radius:50%;background:#ef4444;border:2px solid transparent" id="pc-red"></button>
+        <button type="button" onclick="setProjColor('#3b82f6')" style="width:32px;height:32px;border-radius:50%;background:#3b82f6;border:2px solid transparent" id="pc-blue"></button>
+        <button type="button" onclick="setProjColor('#ec4899')" style="width:32px;height:32px;border-radius:50%;background:#ec4899;border:2px solid transparent" id="pc-pink"></button>
+        <button type="button" onclick="setProjColor('#14b8a6')" style="width:32px;height:32px;border-radius:50%;background:#14b8a6;border:2px solid transparent" id="pc-teal"></button>
+        <button type="button" onclick="setProjColor('#f97316')" style="width:32px;height:32px;border-radius:50%;background:#f97316;border:2px solid transparent" id="pc-orange"></button>
+      </div>
+      <input type="hidden" id="proj-color" value="#6366f1">
+    </div>
+    <div class="form-row">
+      <label>Notes (optional)</label>
+      <input type="text" id="proj-notes" placeholder="Any notes about this project…">
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-ghost" onclick="closeSheet(true)">Cancel</button>
+      <button class="btn btn-primary" onclick="saveProject()">Save Project</button>
+    </div>
+  </div>
+</div>
 
 <!-- ═══ SHEET: ADD EXPENSE ═══ -->
 <div class="bottom-sheet" id="sheet-expense">
