@@ -3313,13 +3313,16 @@ function renderHeatBar() {
     </div>
   `;
 
-  // Push heat to notification data
+  // Push heat to notification data + update persistent pinned notification
   if (typeof Android !== 'undefined') {
-    Android.updateHeatScore(score, lv.label.replace(/[^\w\s\u2014\-]/g,'').trim());
-    Android.updateNotificationData(
-      score >= 50 ? Math.ceil(score/20) : 0,
-      score >= 70 ? lv.label+': '+lv.sub : score >= 50 ? 'Spending warming up — '+avoid7.length+' avoidable spends this week.' : 'All clear — spending under control!'
-    );
+    const cleanLabel = lv.label.replace(/[^\w\s\u2014\-]/g,'').trim();
+    Android.updateHeatScore(score, cleanLabel);
+    const warnSummary = score >= 70 ? lv.sub : score >= 50 ? 'Spending warming up — '+avoid7.length+' avoidable spend(s) this week.' : 'All clear — spending under control.';
+    Android.updateNotificationData(score >= 50 ? Math.ceil(score/20) : 0, warnSummary);
+    // Always-on pinned notification — updates silently every time dashboard loads
+    const pinTitle = 'ExpenseIQ · ' + cleanLabel + ' (' + score + '/100)';
+    const pinBody  = warnSummary + (receivedBack > 0 ? ' · Splits back: '+INR(receivedBack) : '');
+    Android.showPersistentStatus(pinTitle, pinBody, score);
   }
 }
 
