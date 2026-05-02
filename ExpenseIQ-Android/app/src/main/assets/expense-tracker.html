@@ -100,6 +100,9 @@ body {
   cursor:pointer; z-index:99; transition:transform 0.15s, opacity 0.15s;
 }
 .fab:active { transform:scale(0.93); }
+/* Hide FAB and disable overlay touch when any sheet is open */
+body.sheet-open .fab { display:none !important; }
+body.sheet-open .sheet-overlay { pointer-events:none !important; }
 
 /* ── BOTTOM SHEETS ── */
 .sheet-overlay {
@@ -110,7 +113,7 @@ body {
 .bottom-sheet {
   position:fixed; left:0; right:0; bottom:0;
   background:var(--surface); border-radius:20px 20px 0 0;
-  z-index:201; transform:translateY(100%);
+  z-index:500; transform:translateY(100%);
   transition:transform 0.3s cubic-bezier(0.32,0.72,0,1);
   max-height:92vh; display:flex; flex-direction:column;
   padding-bottom: env(safe-area-inset-bottom);
@@ -1571,12 +1574,10 @@ function _shouldBlockOverlayClose() {
 function openSheet(id) {
   closeSheet(true);
   activeSheet = id;
+  document.body.classList.add('sheet-open');
   const ov = document.getElementById('sheet-overlay');
   ov.classList.add('show');
   document.getElementById(id).classList.add('show');
-  // Hide FAB while sheet open — prevents it floating over sheet and intercepting touches
-  const fab = document.getElementById('fab-btn');
-  if (fab) fab.style.display = 'none';
 }
 function closeSheet(force) {
   // Guard accidental closes while keyboard is open or an input is focused
@@ -1586,17 +1587,9 @@ function closeSheet(force) {
     if (a && a.closest && a.closest('.bottom-sheet')) return; // input focused
   }
   document.querySelectorAll('.bottom-sheet.show').forEach(s=>s.classList.remove('show'));
-  const ov = document.getElementById('sheet-overlay');
-  ov.classList.remove('show');
+  document.getElementById('sheet-overlay').classList.remove('show');
+  document.body.classList.remove('sheet-open');
   activeSheet = null;
-  // Restore FAB visibility based on current tab
-  const activeTabEl = document.querySelector('.tab.active');
-  if (activeTabEl) {
-    const tid = activeTabEl.id.replace('tab-','');
-    const fabMap = {expenses:1,reminders:1,commitments:1,needwant:1,salary:1,splits:1,untracked:1,projects:1};
-    const fab = document.getElementById('fab-btn');
-    if (fab && fabMap[tid]) fab.style.display = 'flex';
-  }
 }
 
 // Wire overlay close via touchend (synthetic click doesn't happen on touchend path)
