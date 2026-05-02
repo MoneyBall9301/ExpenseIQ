@@ -2529,6 +2529,18 @@ function renderBudget() {
     && !['Self / Bank Transfers','Credit Card Payments'].includes(e.cat));
   const totalSpent = expenses.reduce((s, e) => s + e.amt, 0);
 
+  // True available — mirrors dashboard formula so Savings bucket stays consistent
+  const _mExp    = D.expenses.filter(e => e.date && e.date.startsWith(month));
+  const _EXCL    = ['Investments / SIP','Self / Bank Transfers','Credit Card Payments'];
+  const _netSpent= Math.max(_mExp.filter(e=>!_EXCL.includes(e.cat)).reduce((s,e)=>s+e.amt,0)
+                   - D.splits.filter(s=>s.received&&s.receivedDate&&s.receivedDate.startsWith(month)).reduce((s,x)=>s+x.amt,0), 0);
+  const _ccAmt   = _mExp.filter(e=>e.cat==='Credit Card Payments').reduce((s,e)=>s+e.amt,0);
+  const _sipC    = D.commitments.filter(c=>c.active&&c.isInvestment).reduce((s,c)=>s+c.amt,0);
+  const _invExp  = _mExp.filter(e=>e.cat==='Investments / SIP').reduce((s,e)=>s+e.amt,0);
+  const _invested= _invExp + _sipC;
+  const _nonSip  = D.commitments.filter(c=>c.active&&!c.isInvestment).reduce((s,c)=>s+c.amt,0);
+  const trueAvail= income - _netSpent - _ccAmt - _invested - _nonSip;
+
   // Income display
   document.getElementById('bud-income-val').textContent = INR(income);
 
@@ -2562,10 +2574,10 @@ function renderBudget() {
       <div class="k-val">${INR(income*savingsPct/100)}</div>
       <div class="k-sub">${savingsPct}% of income</div>
     </div>
-    <div class="kpi" style="--kpi-color:${income-totalSpent>=0?'var(--green)':'var(--red)'}">
-      <div class="k-label">🏦 Actual Saved</div>
-      <div class="k-val">${INR(Math.abs(income-totalSpent))}</div>
-      <div class="k-sub">${income-totalSpent>=0?'✅ Saved':'⚠️ Deficit'}</div>
+    <div class="kpi" style="--kpi-color:${trueAvail>=0?'var(--green)':'var(--red)'}">
+      <div class="k-label">💵 Available</div>
+      <div class="k-val">${INR(Math.abs(trueAvail))}</div>
+      <div class="k-sub">${trueAvail>=0?'✅ after all obligations':'⚠️ Shortfall'}</div>
     </div>`;
 
   // Bucket cards
@@ -2575,8 +2587,8 @@ function renderBudget() {
     const actual = getBucketActual(b, expenses, month);
     const isSavings = b.isCalc;
 
-    // Savings bucket: actual = income - totalSpent
-    const actualAmt = isSavings ? Math.max(0, income - totalSpent) : (actual||0);
+    // Savings bucket: use same formula as dashboard Available KPI
+    const actualAmt = isSavings ? trueAvail : (actual||0);
     const targetDisplay = isSavings ? income * pct / 100 : targetAmt;
     const usedPct = targetDisplay > 0 ? Math.min((actualAmt / targetDisplay) * 100, 100) : 0;
     const over = actualAmt > targetDisplay && targetDisplay > 0;
