@@ -944,7 +944,7 @@ mark { background:rgba(56,189,248,0.25); color:var(--accent); border-radius:3px;
 </nav>
 
 <!-- SHEET OVERLAY -->
-<div class="sheet-overlay" id="sheet-overlay" onclick="closeSheet()"></div>
+<div class="sheet-overlay" id="sheet-overlay" onclick="overlayClose()"></div>
 
 <!-- ═══ SHEET: ADD EXPENSE ═══ -->
 <div class="bottom-sheet" id="sheet-expense">
@@ -1487,15 +1487,28 @@ function goTab(id) {
 //  BOTTOM SHEETS
 // ════════════════════════════════════════════
 let activeSheet = null;
+function overlayClose() {
+  // On Android, keyboard open fires a ghost touch on the overlay — ignore it if
+  // focus is currently inside a sheet input.
+  const a = document.activeElement;
+  if (a && a.closest && a.closest('.bottom-sheet')) { a.blur(); return; }
+  closeSheet();
+}
 function openSheet(id) {
   closeSheet();
   activeSheet = id;
-  document.getElementById('sheet-overlay').classList.add('show');
+  const ov = document.getElementById('sheet-overlay');
+  ov.classList.add('show');
+  // Re-enable pointer events after a short delay so keyboard-open ghost taps don't close sheet
+  ov.style.pointerEvents = 'none';
+  setTimeout(() => { ov.style.pointerEvents = ''; }, 400);
   document.getElementById(id).classList.add('show');
 }
 function closeSheet() {
   document.querySelectorAll('.bottom-sheet.show').forEach(s=>s.classList.remove('show'));
-  document.getElementById('sheet-overlay').classList.remove('show');
+  const ov = document.getElementById('sheet-overlay');
+  ov.classList.remove('show');
+  ov.style.pointerEvents = '';
   activeSheet = null;
 }
 
