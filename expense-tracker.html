@@ -3315,6 +3315,7 @@ function renderHeatBar() {
 
   // Push heat to notification data
   if (typeof Android !== 'undefined') {
+    Android.updateHeatScore(score, lv.label.replace(/[^\w\s\u2014\-]/g,'').trim());
     Android.updateNotificationData(
       score >= 50 ? Math.ceil(score/20) : 0,
       score >= 70 ? lv.label+': '+lv.sub : score >= 50 ? 'Spending warming up — '+avoid7.length+' avoidable spends this week.' : 'All clear — spending under control!'

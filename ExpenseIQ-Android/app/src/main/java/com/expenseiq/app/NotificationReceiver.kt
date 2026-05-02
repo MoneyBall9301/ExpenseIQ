@@ -43,11 +43,25 @@ class NotificationReceiver : BroadcastReceiver() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        val heatScore = prefs.getInt("heat_score", 0)
+        val heatLabel = prefs.getString("heat_label", "") ?: ""
+        val heatEmoji = when {
+            heatScore <= 15 -> "❄️"
+            heatScore <= 30 -> "🌿"
+            heatScore <= 50 -> "🌡️"
+            heatScore <= 70 -> "🔥"
+            else            -> "🔥🔥"
+        }
+        val fullBody = if (heatLabel.isNotEmpty())
+            "$body\n$heatEmoji Spending Heat: $heatLabel ($heatScore/100)"
+        else body
+
         val notif = NotificationCompat.Builder(context, "expenseiq_alerts")
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle(title)
             .setContentText(body)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(body))
+            .setStyle(NotificationCompat.BigTextStyle().bigText(fullBody))
+            .setProgress(100, heatScore, false)
             .setContentIntent(pi)
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
@@ -69,18 +83,4 @@ class NotificationReceiver : BroadcastReceiver() {
             add(java.util.Calendar.DAY_OF_YEAR, 1)
             set(java.util.Calendar.HOUR_OF_DAY, hour)
             set(java.util.Calendar.MINUTE, minute)
-            set(java.util.Calendar.SECOND, 0)
-        }
-        val am = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        val pi = PendingIntent.getBroadcast(
-            context, 0,
-            Intent(context, NotificationReceiver::class.java),
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-        try {
-            am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, cal.timeInMillis, pi)
-        } catch (e: Exception) {
-            am.set(AlarmManager.RTC_WAKEUP, cal.timeInMillis, pi)
-        }
-    }
-}
+            set(java.
