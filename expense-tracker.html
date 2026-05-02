@@ -793,63 +793,83 @@ mark { background:rgba(56,189,248,0.25); color:var(--accent); border-radius:3px;
 <!-- PROJECT bottom sheet -->
 <div class="bottom-sheet" id="sheet-project">
   <div class="sheet-handle"></div>
-  <div class="sheet-title" id="proj-sheet-title">New Project</div>
+  <div class="sheet-header">
+    <span class="sheet-title" id="proj-sheet-title">New Project</span>
+    <button class="sheet-close" onclick="closeSheet()">✕</button>
+  </div>
   <input type="hidden" id="proj-edit-id">
-  <div class="form-row">
-    <label>Project Name</label>
-    <input type="text" id="proj-name" placeholder="e.g. Marriage, Car, Masters…">
-  </div>
-  <div class="form-row" style="display:flex;gap:10px">
-    <div style="flex:1">
-      <label>Emoji</label>
-      <input type="text" id="proj-emoji" placeholder="🎯" maxlength="2" style="text-align:center;font-size:20px">
+  <div class="sheet-body">
+    <div class="form-row">
+      <label>Project Name</label>
+      <input type="text" id="proj-name" placeholder="e.g. Marriage, Car, Masters…">
     </div>
-    <div style="flex:1">
+    <div class="form-row" style="display:flex;gap:10px">
+      <div style="flex:1">
+        <label>Emoji</label>
+        <input type="text" id="proj-emoji" placeholder="🎯" maxlength="2" style="text-align:center;font-size:20px">
+      </div>
+      <div style="flex:2">
+        <label>Target Date</label>
+        <input type="month" id="proj-deadline">
+      </div>
+    </div>
+    <div class="form-row">
       <label>Color</label>
-      <input type="color" id="proj-color" value="#6366f1" style="width:100%;height:42px;border-radius:8px;border:1px solid var(--border);background:var(--surface2)">
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button type="button" onclick="setProjColor('#6366f1')" style="width:32px;height:32px;border-radius:50%;background:#6366f1;border:2px solid transparent" id="pc-indigo"></button>
+        <button type="button" onclick="setProjColor('#22c55e')" style="width:32px;height:32px;border-radius:50%;background:#22c55e;border:2px solid transparent" id="pc-green"></button>
+        <button type="button" onclick="setProjColor('#f59e0b')" style="width:32px;height:32px;border-radius:50%;background:#f59e0b;border:2px solid transparent" id="pc-amber"></button>
+        <button type="button" onclick="setProjColor('#ef4444')" style="width:32px;height:32px;border-radius:50%;background:#ef4444;border:2px solid transparent" id="pc-red"></button>
+        <button type="button" onclick="setProjColor('#3b82f6')" style="width:32px;height:32px;border-radius:50%;background:#3b82f6;border:2px solid transparent" id="pc-blue"></button>
+        <button type="button" onclick="setProjColor('#ec4899')" style="width:32px;height:32px;border-radius:50%;background:#ec4899;border:2px solid transparent" id="pc-pink"></button>
+        <button type="button" onclick="setProjColor('#14b8a6')" style="width:32px;height:32px;border-radius:50%;background:#14b8a6;border:2px solid transparent" id="pc-teal"></button>
+        <button type="button" onclick="setProjColor('#f97316')" style="width:32px;height:32px;border-radius:50%;background:#f97316;border:2px solid transparent" id="pc-orange"></button>
+      </div>
+      <input type="hidden" id="proj-color" value="#6366f1">
     </div>
-    <div style="flex:2">
-      <label>Target Date</label>
-      <input type="month" id="proj-deadline">
+    <div class="form-row">
+      <label>Notes (optional)</label>
+      <input type="text" id="proj-notes" placeholder="Any notes about this project…">
     </div>
-  </div>
-  <div class="form-row">
-    <label>Notes (optional)</label>
-    <input type="text" id="proj-notes" placeholder="Any notes about this project…">
-  </div>
-  <div class="btn-row">
-    <button class="btn btn-ghost" onclick="closeSheet()">Cancel</button>
-    <button class="btn btn-primary" onclick="saveProject()">Save Project</button>
+    <div class="btn-row">
+      <button class="btn btn-ghost" onclick="closeSheet()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveProject()">Save Project</button>
+    </div>
   </div>
 </div>
 
 <!-- PROJECT ITEM bottom sheet -->
 <div class="bottom-sheet" id="sheet-proj-item">
   <div class="sheet-handle"></div>
-  <div class="sheet-title" id="proj-item-sheet-title">Add Expense</div>
+  <div class="sheet-header">
+    <span class="sheet-title" id="proj-item-sheet-title">Add Expense</span>
+    <button class="sheet-close" onclick="closeSheet()">✕</button>
+  </div>
   <input type="hidden" id="proj-item-proj-id">
   <input type="hidden" id="proj-item-edit-id">
-  <div class="form-row">
-    <label>Expense Name</label>
-    <input type="text" id="proj-item-name" placeholder="e.g. Venue, Tuition, Down Payment…">
-  </div>
-  <div class="form-row" style="display:flex;gap:10px">
-    <div style="flex:1">
-      <label>Required (₹)</label>
-      <input type="number" id="proj-item-required" placeholder="0">
+  <div class="sheet-body">
+    <div class="form-row">
+      <label>Expense Name</label>
+      <input type="text" id="proj-item-name" placeholder="e.g. Venue, Tuition, Down Payment…">
     </div>
-    <div style="flex:1">
-      <label>Allocated (₹)</label>
-      <input type="number" id="proj-item-allocated" placeholder="0">
+    <div class="form-row" style="display:flex;gap:10px">
+      <div style="flex:1">
+        <label>Required (₹)</label>
+        <input type="number" id="proj-item-required" placeholder="0" inputmode="numeric">
+      </div>
+      <div style="flex:1">
+        <label>Allocated (₹)</label>
+        <input type="number" id="proj-item-allocated" placeholder="0" inputmode="numeric">
+      </div>
     </div>
-  </div>
-  <div class="form-row">
-    <label>Notes (optional)</label>
-    <input type="text" id="proj-item-notes" placeholder="Any notes…">
-  </div>
-  <div class="btn-row">
-    <button class="btn btn-ghost" onclick="closeSheet()">Cancel</button>
-    <button class="btn btn-primary" onclick="saveProjectItem()">Save</button>
+    <div class="form-row">
+      <label>Notes (optional)</label>
+      <input type="text" id="proj-item-notes" placeholder="Any notes…">
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-ghost" onclick="closeSheet()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveProjectItem()">Save</button>
+    </div>
   </div>
 </div>
 
@@ -1445,11 +1465,12 @@ function goTab(id) {
   const fabMap = {
     dashboard:null, expenses:'sheet-expense', reminders:'sheet-reminder',
     commitments:'sheet-commitment', needwant:'sheet-needwant', salary:'sheet-salary',
-    splits:'sheet-split', untracked:'sheet-untracked', ai:null, settings:null, more:null, budget:null, projects:'sheet-project'
+    splits:'sheet-split', untracked:'sheet-untracked', ai:null, settings:null, more:null, budget:null, projects:null
   };
   const fab = document.getElementById('fab-btn');
   const target = fabMap[id];
-  if(target) { fab.style.display='flex'; fab.onclick=()=>openSheet(target); }
+  if(id==='projects'){ fab.style.display='flex'; fab.onclick=()=>openProjectSheet(null); }
+  else if(target) { fab.style.display='flex'; fab.onclick=()=>openSheet(target); }
   else fab.style.display='none';
 
   const renders = {
@@ -2491,15 +2512,25 @@ function toggleProject(id){
   safeRun(renderProjects,'renderProjects');
 }
 
+function setProjColor(c){
+  document.getElementById('proj-color').value=c;
+  ['pc-indigo','pc-green','pc-amber','pc-red','pc-blue','pc-pink','pc-teal','pc-orange'].forEach(id=>{
+    const btn=document.getElementById(id);
+    if(btn) btn.style.border='2px solid transparent';
+  });
+  const colorMap={'#6366f1':'pc-indigo','#22c55e':'pc-green','#f59e0b':'pc-amber','#ef4444':'pc-red','#3b82f6':'pc-blue','#ec4899':'pc-pink','#14b8a6':'pc-teal','#f97316':'pc-orange'};
+  const btnId=colorMap[c];
+  if(btnId){const b=document.getElementById(btnId);if(b)b.style.border='2px solid white';}
+}
 function openProjectSheet(id){
   const p=id?D.projects.find(x=>x.id===id):null;
   document.getElementById('proj-sheet-title').textContent=p?'Edit Project':'New Project';
   document.getElementById('proj-edit-id').value=p?p.id:'';
   document.getElementById('proj-name').value=p?p.name:'';
   document.getElementById('proj-emoji').value=p?p.emoji:'🎯';
-  document.getElementById('proj-color').value=p?p.color:'#6366f1';
   document.getElementById('proj-deadline').value=p?p.deadline:'';
   document.getElementById('proj-notes').value=p?p.notes:'';
+  setProjColor(p?p.color:'#6366f1');
   openSheet('sheet-project');
 }
 
