@@ -800,7 +800,7 @@ mark { background:rgba(56,189,248,0.25); color:var(--accent); border-radius:3px;
   <div class="sheet-handle"></div>
   <div class="sheet-header">
     <span class="sheet-title" id="proj-sheet-title">New Project</span>
-    <button class="sheet-close" onclick="closeSheet()">✕</button>
+    <button class="sheet-close" onclick="closeSheet(true)">✕</button>
   </div>
   <input type="hidden" id="proj-edit-id">
   <div class="sheet-body">
@@ -837,7 +837,7 @@ mark { background:rgba(56,189,248,0.25); color:var(--accent); border-radius:3px;
       <input type="text" id="proj-notes" placeholder="Any notes about this project…">
     </div>
     <div class="btn-row">
-      <button class="btn btn-ghost" onclick="closeSheet()">Cancel</button>
+      <button class="btn btn-ghost" onclick="closeSheet(true)">Cancel</button>
       <button class="btn btn-primary" onclick="saveProject()">Save Project</button>
     </div>
   </div>
@@ -848,7 +848,7 @@ mark { background:rgba(56,189,248,0.25); color:var(--accent); border-radius:3px;
   <div class="sheet-handle"></div>
   <div class="sheet-header">
     <span class="sheet-title" id="proj-item-sheet-title">Add Expense</span>
-    <button class="sheet-close" onclick="closeSheet()">✕</button>
+    <button class="sheet-close" onclick="closeSheet(true)">✕</button>
   </div>
   <input type="hidden" id="proj-item-proj-id">
   <input type="hidden" id="proj-item-edit-id">
@@ -872,7 +872,7 @@ mark { background:rgba(56,189,248,0.25); color:var(--accent); border-radius:3px;
       <input type="text" id="proj-item-notes" placeholder="Any notes…">
     </div>
     <div class="btn-row">
-      <button class="btn btn-ghost" onclick="closeSheet()">Cancel</button>
+      <button class="btn btn-ghost" onclick="closeSheet(true)">Cancel</button>
       <button class="btn btn-primary" onclick="saveProjectItem()">Save</button>
     </div>
   </div>
@@ -953,7 +953,7 @@ mark { background:rgba(56,189,248,0.25); color:var(--accent); border-radius:3px;
   <div class="sheet-handle"></div>
   <div class="sheet-header">
     <span class="sheet-title" id="cc-card-sheet-title">Add Card</span>
-    <button class="sheet-close" onclick="closeSheet()">✕</button>
+    <button class="sheet-close" onclick="closeSheet(true)">✕</button>
   </div>
   <input type="hidden" id="cc-card-edit-id">
   <div class="sheet-body">
@@ -977,7 +977,7 @@ mark { background:rgba(56,189,248,0.25); color:var(--accent); border-radius:3px;
       <div style="font-size:11px;color:var(--muted);margin-top:4px">Enter the amount you currently owe on this card — future purchases and payments will be tracked from here.</div>
     </div>
     <div class="btn-row">
-      <button class="btn btn-ghost" onclick="closeSheet()">Cancel</button>
+      <button class="btn btn-ghost" onclick="closeSheet(true)">Cancel</button>
       <button class="btn btn-primary" onclick="saveCCCard()">Save Card</button>
     </div>
   </div>
@@ -991,7 +991,7 @@ mark { background:rgba(56,189,248,0.25); color:var(--accent); border-radius:3px;
   <div class="sheet-handle"></div>
   <div class="sheet-header">
     <span class="sheet-title" id="exp-sheet-title">➕ Add Expense</span>
-    <button class="sheet-close" onclick="closeSheet()">✕</button>
+    <button class="sheet-close" onclick="closeSheet(true)">✕</button>
   </div>
   <div class="sheet-body">
     <form id="exp-form" onsubmit="saveExpense(event)">
@@ -1066,7 +1066,7 @@ mark { background:rgba(56,189,248,0.25); color:var(--accent); border-radius:3px;
   <div class="sheet-handle"></div>
   <div class="sheet-header">
     <span class="sheet-title">🔔 Add Reminder / Task</span>
-    <button class="sheet-close" onclick="closeSheet()">✕</button>
+    <button class="sheet-close" onclick="closeSheet(true)">✕</button>
   </div>
   <div class="sheet-body">
     <form id="rem-form" onsubmit="saveReminder(event)">
@@ -1097,7 +1097,7 @@ mark { background:rgba(56,189,248,0.25); color:var(--accent); border-radius:3px;
         <textarea id="r-desc" placeholder="More details…"></textarea>
       </div>
       <div class="btn-row">
-        <button type="button" class="btn btn-ghost" onclick="closeSheet()">Cancel</button>
+        <button type="button" class="btn btn-ghost" onclick="closeSheet(true)">Cancel</button>
         <button type="submit" class="btn btn-primary">💾 Save</button>
       </div>
     </form>
@@ -1109,7 +1109,7 @@ mark { background:rgba(56,189,248,0.25); color:var(--accent); border-radius:3px;
   <div class="sheet-handle"></div>
   <div class="sheet-header">
     <span class="sheet-title">💼 Add Commitment</span>
-    <button class="sheet-close" onclick="closeSheet()">✕</button>
+    <button class="sheet-close" onclick="closeSheet(true)">✕</button>
   </div>
   <div class="sheet-body">
     <form id="com-form" onsubmit="saveCommitment(event)">
@@ -1162,7 +1162,7 @@ mark { background:rgba(56,189,248,0.25); color:var(--accent); border-radius:3px;
         <div style="font-size:12px;color:var(--muted);margin-top:4px">When checked, counted as "Invested" in dashboard. Don't also log as expense.</div>
       </div>
       <div class="btn-row">
-        <button type="button" class="btn btn-ghost" onclick="closeSheet()">Cancel</button>
+        <button type="button" class="btn btn-ghost" onclick="closeSheet(true)">Cancel</button>
         <button type="submit" class="btn btn-primary">💾 Save</button>
       </div>
     </form>
@@ -1174,7 +1174,7 @@ mark { background:rgba(56,189,248,0.25); color:var(--accent); border-radius:3px;
   <div class="sheet-handle"></div>
   <div class="sheet-header">
     <span class="sheet-title">📋 Add Item</span>
-    <button class="sheet-close" onclick="closeSheet()">✕</button>
+    <button class="sheet-close" onclick="closeSheet(true)">✕</button>
   </div>
   <div class="sheet-body">
     <form id="nw-form" onsubmit="saveNW(event)">
@@ -1209,7 +1209,7 @@ mark { background:rgba(56,189,248,0.25); color:var(--accent); border-radius:3px;
         <textarea id="nw-why" placeholder="Justify why this is on the list…"></textarea>
       </div>
       <div class="btn-row">
-        <button type="button" class="btn btn-ghost" onclick="closeSheet()">Cancel</button>
+        <button type="button" class="btn btn-ghost" onclick="closeSheet(true)">Cancel</button>
         <button type="submit" class="btn btn-primary">💾 Save</button>
       </div>
     </form>
@@ -1221,7 +1221,7 @@ mark { background:rgba(56,189,248,0.25); color:var(--accent); border-radius:3px;
   <div class="sheet-handle"></div>
   <div class="sheet-header">
     <span class="sheet-title">💰 Add Income</span>
-    <button class="sheet-close" onclick="closeSheet()">✕</button>
+    <button class="sheet-close" onclick="closeSheet(true)">✕</button>
   </div>
   <div class="sheet-body">
     <form id="sal-form" onsubmit="saveSalary(event)">
@@ -1251,7 +1251,7 @@ mark { background:rgba(56,189,248,0.25); color:var(--accent); border-radius:3px;
         <textarea id="s-notes" placeholder="Optional notes…" style="min-height:60px"></textarea>
       </div>
       <div class="btn-row">
-        <button type="button" class="btn btn-ghost" onclick="closeSheet()">Cancel</button>
+        <button type="button" class="btn btn-ghost" onclick="closeSheet(true)">Cancel</button>
         <button type="submit" class="btn btn-primary">💾 Save</button>
       </div>
     </form>
@@ -1263,7 +1263,7 @@ mark { background:rgba(56,189,248,0.25); color:var(--accent); border-radius:3px;
   <div class="sheet-handle"></div>
   <div class="sheet-header">
     <span class="sheet-title">🤝 Add IOU</span>
-    <button class="sheet-close" onclick="closeSheet()">✕</button>
+    <button class="sheet-close" onclick="closeSheet(true)">✕</button>
   </div>
   <div class="sheet-body">
     <form id="sp-form" onsubmit="saveSplit(event)">
@@ -1302,7 +1302,7 @@ mark { background:rgba(56,189,248,0.25); color:var(--accent); border-radius:3px;
         <textarea id="sp-notes" placeholder="Extra details…" style="min-height:56px"></textarea>
       </div>
       <div class="btn-row">
-        <button type="button" class="btn btn-ghost" onclick="closeSheet()">Cancel</button>
+        <button type="button" class="btn btn-ghost" onclick="closeSheet(true)">Cancel</button>
         <button type="submit" class="btn btn-primary">💾 Save</button>
       </div>
     </form>
@@ -1314,7 +1314,7 @@ mark { background:rgba(56,189,248,0.25); color:var(--accent); border-radius:3px;
   <div class="sheet-handle"></div>
   <div class="sheet-header">
     <span class="sheet-title">🗂️ Add Untracked Expense</span>
-    <button class="sheet-close" onclick="closeSheet()">✕</button>
+    <button class="sheet-close" onclick="closeSheet(true)">✕</button>
   </div>
   <div class="sheet-body">
     <form id="ut-form" onsubmit="saveUntracked(event)">
@@ -1353,7 +1353,7 @@ mark { background:rgba(56,189,248,0.25); color:var(--accent); border-radius:3px;
         <textarea id="ut-notes" placeholder="Why is this untracked?" style="min-height:56px"></textarea>
       </div>
       <div class="btn-row">
-        <button type="button" class="btn btn-ghost" onclick="closeSheet()">Cancel</button>
+        <button type="button" class="btn btn-ghost" onclick="closeSheet(true)">Cancel</button>
         <button type="submit" class="btn btn-primary">💾 Save</button>
       </div>
     </form>
@@ -1365,7 +1365,7 @@ mark { background:rgba(56,189,248,0.25); color:var(--accent); border-radius:3px;
   <div class="sheet-handle"></div>
   <div class="sheet-header">
     <span class="sheet-title">✅ Mark as Received</span>
-    <button class="sheet-close" onclick="closeSheet()">✕</button>
+    <button class="sheet-close" onclick="closeSheet(true)">✕</button>
   </div>
   <div class="sheet-body">
     <div class="form-row" style="margin-bottom:20px">
@@ -1567,7 +1567,7 @@ function _shouldBlockOverlayClose() {
 }
 
 function openSheet(id) {
-  closeSheet();
+  closeSheet(true);
   activeSheet = id;
   const ov = document.getElementById('sheet-overlay');
   ov.classList.add('show');
@@ -1576,7 +1576,13 @@ function openSheet(id) {
   const fab = document.getElementById('fab-btn');
   if (fab) fab.style.display = 'none';
 }
-function closeSheet() {
+function closeSheet(force) {
+  // Guard accidental closes while keyboard is open or an input is focused
+  if (!force && activeSheet) {
+    if (_baseViewH - window.innerHeight > 100) return;   // keyboard open
+    const a = document.activeElement;
+    if (a && a.closest && a.closest('.bottom-sheet')) return; // input focused
+  }
   document.querySelectorAll('.bottom-sheet.show').forEach(s=>s.classList.remove('show'));
   const ov = document.getElementById('sheet-overlay');
   ov.classList.remove('show');
@@ -2131,7 +2137,7 @@ function saveExpense(ev) {
   };
   if(editExpId){ const i=D.expenses.findIndex(e=>e.id===editExpId); if(i>-1) D.expenses[i]=exp; editExpId=null; }
   else D.expenses.unshift(exp);
-  save(); resetExpForm(); closeSheet();
+  save(); resetExpForm(); closeSheet(true);
   renderExpList(); renderDashboard();
   // Spend limit check after saving
   const _sl=+(D.settings.spendLimit||0);
@@ -2237,7 +2243,7 @@ function saveReminder(ev) {
     date:document.getElementById('r-date').value, amt:parseFloat(document.getElementById('r-amt').value)||null, done:false
   });
   save(); document.getElementById('rem-form').reset(); setTodayDates();
-  closeSheet(); renderReminders(); toast('✅ Saved!');
+  closeSheet(true); renderReminders(); toast('✅ Saved!');
 }
 function toggleRem(id) { const r=D.reminders.find(x=>x.id===id); if(r){r.done=!r.done;save();renderReminders();} }
 function delRem(id) { D.reminders=D.reminders.filter(x=>x.id!==id);save();renderReminders();toast('🗑️ Deleted'); }
@@ -2292,7 +2298,7 @@ function saveCommitment(ev) {
   document.getElementById('com-form').reset();
   document.getElementById('c-isinvest').checked=false;
   setCType('recurring');
-  closeSheet(); renderCommitments(); toast('✅ Saved!');
+  closeSheet(true); renderCommitments(); toast('✅ Saved!');
 }
 function delCom(id) { D.commitments=D.commitments.filter(x=>x.id!==id);save();renderCommitments();toast('🗑️ Deleted'); }
 function pauseCom(id) { const c=D.commitments.find(x=>x.id===id);if(c){c.active=!c.active;save();renderCommitments();} }
@@ -2408,7 +2414,7 @@ function saveNW(ev) {
     amt:parseFloat(document.getElementById('nw-amt').value)||null,
     pri:document.getElementById('nw-pri').value, done:false
   });
-  save(); document.getElementById('nw-form').reset(); closeSheet(); renderNW(); toast('✅ Added!');
+  save(); document.getElementById('nw-form').reset(); closeSheet(true); renderNW(); toast('✅ Added!');
 }
 function toggleNW(id) { const i=D.needWant.find(x=>x.id===id);if(i){i.done=!i.done;save();renderNW();} }
 function delNW(id) { D.needWant=D.needWant.filter(x=>x.id!==id);save();renderNW();toast('🗑️ Deleted'); }
@@ -2442,7 +2448,7 @@ function saveSalary(ev) {
     type:document.getElementById('s-type').value, notes:document.getElementById('s-notes').value
   });
   save(); document.getElementById('sal-form').reset(); setTodayDates();
-  closeSheet(); renderSalary(); renderDashboard(); toast('✅ Income saved!');
+  closeSheet(true); renderSalary(); renderDashboard(); toast('✅ Income saved!');
 }
 function delSal(id) { D.salary=D.salary.filter(x=>x.id!==id);save();renderSalary();toast('🗑️ Deleted'); }
 function renderSalary() {
@@ -2487,7 +2493,7 @@ function saveSplit(ev) {
     received:false, receivedDate:null, receivedMode:null
   });
   save(); document.getElementById('sp-form').reset(); setTodayDates();
-  closeSheet(); renderSplits(); toast('✅ IOU saved!');
+  closeSheet(true); renderSplits(); toast('✅ IOU saved!');
 }
 function markReceived(id) {
   document.getElementById('recv-split-id').value=id;
@@ -2499,7 +2505,7 @@ function confirmReceived() {
   s.received=true;
   s.receivedDate=new Date().toISOString().split('T')[0];
   s.receivedMode=document.getElementById('recv-mode').value;
-  save(); closeSheet(); renderSplits(); toast('✅ Marked as received!');
+  save(); closeSheet(true); renderSplits(); toast('✅ Marked as received!');
 }
 function markPending(id) {
   if(!confirm('Mark as pending again?')) return;
@@ -2561,7 +2567,7 @@ function saveUntracked(ev) {
     notes:document.getElementById('ut-notes').value.trim()
   });
   save(); document.getElementById('ut-form').reset(); setTodayDates();
-  closeSheet(); renderUntracked(); toast('✅ Saved!');
+  closeSheet(true); renderUntracked(); toast('✅ Saved!');
 }
 function delUntracked(id) { if(!confirm('Delete?')) return; D.untracked=D.untracked.filter(x=>x.id!==id);save();renderUntracked();toast('🗑️ Deleted'); }
 function renderUntracked() {
@@ -2743,7 +2749,7 @@ function saveProject(){
   } else {
     D.projects.unshift({id:uid(),name,emoji:document.getElementById('proj-emoji').value||'🎯',color:document.getElementById('proj-color').value,deadline:document.getElementById('proj-deadline').value,notes:document.getElementById('proj-notes').value,items:[]});
   }
-  save(); closeSheet(); safeRun(renderProjects,'renderProjects'); toast('✅ Project saved!');
+  save(); closeSheet(true); safeRun(renderProjects,'renderProjects'); toast('✅ Project saved!');
 }
 
 function deleteProject(id){
@@ -2781,7 +2787,7 @@ function saveProjectItem(){
     p.items.push({id:uid(),name,required,allocated,notes});
     localStorage.setItem('proj_open_'+projId,'1'); // auto-expand
   }
-  save(); closeSheet(); safeRun(renderProjects,'renderProjects'); toast('✅ Saved!');
+  save(); closeSheet(true); safeRun(renderProjects,'renderProjects'); toast('✅ Saved!');
 }
 
 function deleteProjItem(projId,itemId){
@@ -3393,7 +3399,7 @@ function saveCCCard() {
   } else {
     D.creditCards.push({id:uid(), ...data});
   }
-  save(); closeSheet(); renderCCCardsList(); toast('✅ Card saved!');
+  save(); closeSheet(true); renderCCCardsList(); toast('✅ Card saved!');
 }
 
 function deleteCCCard(id) {
