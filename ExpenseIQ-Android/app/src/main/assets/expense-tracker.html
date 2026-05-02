@@ -1541,8 +1541,8 @@ function goTab(id) {
 // ════════════════════════════════════════════
 let activeSheet = null;
 function overlayClose() {
-  // On Android, keyboard open fires a ghost touch on the overlay — ignore it if
-  // focus is currently inside a sheet input.
+  // On Android, keyboard open fires ghost touches on the overlay.
+  // If any sheet input is focused, just dismiss keyboard — don't close sheet.
   const a = document.activeElement;
   if (a && a.closest && a.closest('.bottom-sheet')) { a.blur(); return; }
   closeSheet();
@@ -1552,9 +1552,9 @@ function openSheet(id) {
   activeSheet = id;
   const ov = document.getElementById('sheet-overlay');
   ov.classList.add('show');
-  // Re-enable pointer events after a short delay so keyboard-open ghost taps don't close sheet
+  // Block overlay immediately on open
   ov.style.pointerEvents = 'none';
-  setTimeout(() => { ov.style.pointerEvents = ''; }, 400);
+  setTimeout(() => { ov.style.pointerEvents = ''; }, 600);
   document.getElementById(id).classList.add('show');
 }
 function closeSheet() {
@@ -1564,6 +1564,18 @@ function closeSheet() {
   ov.style.pointerEvents = '';
   activeSheet = null;
 }
+// Every time a sheet input gains focus (keyboard opens), block the overlay for 800ms
+// This prevents the keyboard-open ghost tap from closing the sheet
+document.addEventListener('focusin', function(e) {
+  if (e.target && e.target.closest && e.target.closest('.bottom-sheet')) {
+    const ov = document.getElementById('sheet-overlay');
+    if (ov) {
+      ov.style.pointerEvents = 'none';
+      clearTimeout(window._ovTimer);
+      window._ovTimer = setTimeout(() => { if(ov) ov.style.pointerEvents = ''; }, 800);
+    }
+  }
+});
 
 // ════════════════════════════════════════════
 //  INIT
