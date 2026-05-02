@@ -1799,7 +1799,6 @@ function renderDashboard() {
   const income=mSal.reduce((s,e)=>s+e.amt,0);
   const spentTxns=mExp.filter(e=>!EXCL_SPENT.includes(e.cat)&&e.txtype!=='credit_card'&&!e._commitId).length;
   const avoidable=mExp.filter(e=>e.avoid==='yes'&&!EXCL_SPENT.includes(e.cat)&&e.txtype!=='credit_card'&&!e._commitId).reduce((s,e)=>s+e.amt,0);
-  const unavoidable=mExp.filter(e=>e.avoid==='no'&&!EXCL_SPENT.includes(e.cat)&&e.txtype!=='credit_card'&&!e._commitId).reduce((s,e)=>s+e.amt,0);
   // Splits received back this month — subtract from gross spent to get net spent
   const receivedBack=D.splits.filter(s=>s.received&&s.receivedDate&&s.receivedDate.startsWith(month)).reduce((s,x)=>s+x.amt,0);
   const netSpent=Math.max(spent-receivedBack,0);
@@ -1810,7 +1809,6 @@ function renderDashboard() {
   const net=income-netSpent-ccAmt-invested;
   // Projected surplus after planned commits
   const projNet=net-nonSipCommits;
-  // Projects summary (safe — guard against items being undefined)
   const _projs=D.projects||[];
   const projCount=_projs.length;
   const projTotalReq=_projs.reduce((s,p)=>s+(p.items||[]).reduce((ss,i)=>ss+(i.required||0),0),0);
@@ -2825,19 +2823,16 @@ function openProjFundSheet(projId, itemId) {
   document.getElementById('proj-fund-amount').value = '';
   document.getElementById('proj-fund-note').value = '';
   document.getElementById('proj-fund-source').value = 'savings';
-  // Show last 5 funding history entries
   const hist = item.fundHistory || [];
   const histEl = document.getElementById('proj-fund-history');
   if(hist.length > 0) {
-    histEl.innerHTML = `<div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;margin:14px 0 8px">Funding History</div>`
-      + hist.slice(-5).reverse().map(h=>`
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--surface2)">
-          <div>
-            <div style="font-size:13px;color:var(--text)">${FUND_SOURCE_LABEL[h.source]||h.source}</div>
-            <div style="font-size:11px;color:var(--muted)">${h.date}${h.note?' · '+h.note:''}</div>
-          </div>
-          <div style="font-size:14px;font-weight:700;color:var(--green)">+${INR(h.amount)}</div>
-        </div>`).join('');
+    histEl.innerHTML = '<div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;margin:14px 0 8px">Funding History</div>'
+      + hist.slice(-5).reverse().map(h=>
+        '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--surface2)">'
+        +'<div><div style="font-size:13px;color:var(--text)">'+(FUND_SOURCE_LABEL[h.source]||h.source)+'</div>'
+        +'<div style="font-size:11px;color:var(--muted)">'+h.date+(h.note?' · '+h.note:'')+'</div></div>'
+        +'<div style="font-size:14px;font-weight:700;color:var(--green)">+'+INR(h.amount)+'</div>'
+        +'</div>').join('');
   } else { histEl.innerHTML = ''; }
   openSheet('sheet-proj-fund');
 }
@@ -4262,4 +4257,100 @@ function runSearch(raw) {
       type:'rem', icon: r.type==='task'?'✅':r.type==='upcoming'?'💸':'🔔',
       title: r.title, sub: r.date ? `Due ${fmtDate(r.date)}` : 'No due date',
       amt: r.amt ? INR(r.amt) : '', amtClass:'txt-yellow',
-      secLabel:'Reminder', secCl
+      secLabel:'Reminder', secClass:'rs-rem',
+      action: ()=>{ closeSearch(); goTab('reminders'); }
+    });
+  });
+
+  D.splits.forEach(s => {
+    const hay = `${s.person||''} ${s.title||''} ${s.desc||''} ${s.notes||''}`.toLowerCase();
+    if (hay.includes(q)) results.push({
+      type:'spl', icon:'🤝',
+      title: `${s.person||s.title} — ${s.desc||''}`,
+      sub: `${fmtDate(s.date)} · ${s.settled?'✅ Settled':'⏳ Pending'}`,
+      amt: INR(s.myShare||s.amt), amtClass: s.settled?'txt-green':'txt-purple',
+      secLabel:'Split', secClass:'rs-spl',
+      action: ()=>{ closeSearch(); goTab('splits'); }
+    });
+  });
+
+  D.commitments.forEach(c => {
+    const hay = `${c.name} ${c.desc||''}`.toLowerCase();
+    if (hay.includes(q)) results.push({
+      type:'com', icon:'📋',
+      title: c.name, sub: `Due ${ordinal(c.due||1)} every month · ${c.active?'Active':'Inactive'}`,
+      amt: INR(c.amt), amtClass:'txt-orange',
+      secLabel:'Commitment', secClass:'rs-com',
+      action: ()=>{ closeSearch(); goTab('commitments'); }
+    });
+  });
+
+  D.needWant.forEach(n => {
+    const hay = `${n.item} ${n.why||''}`.toLowerCase();
+    if (hay.includes(q)) results.push({
+      type:'nw', icon: n.type==='need'?'🟢':'🟡',
+      title: n.item, sub: n.why || (n.type==='need'?'Need':'Want'),
+      amt: n.amt ? INR(n.amt) : '', amtClass:'txt-green',
+      secLabel: n.type==='need'?'Need':'Want', secClass:'rs-nw',
+      action: ()=>{ closeSearch(); goTab('needwant'); }
+    });
+  });
+
+  D.salary.forEach(s => {
+    const hay = `${s.notes||''} ${s.src||''} ${s.type||''}`.toLowerCase();
+    if (hay.includes(q) || String(s.amt).includes(q)) results.push({
+      type:'sal', icon:'💰',
+      title: s.notes||s.src||'Income', sub: fmtDate(s.date),
+      amt: INR(s.amt), amtClass:'txt-green',
+      secLabel:'Income', secClass:'rs-sal',
+      action: ()=>{ closeSearch(); goTab('salary'); }
+    });
+  });
+
+  if (!results.length) {
+    el.innerHTML = `<div class="empty"><div class="empty-icon">🔍</div><div>No results for "<strong>${q}</strong>"</div></div>`;
+    return;
+  }
+  el.innerHTML = results.map(r => `
+    <div class="search-result-item" onclick="(${r.action.toString()})()">
+      <span class="sr-icon">${r.icon}</span>
+      <div class="sr-body">
+        <div class="sr-title">${highlight(r.title, q)}</div>
+        <div class="sr-sub">${r.sub}</div>
+      </div>
+      <div class="sr-right">
+        ${r.amt ? `<span class="${r.amtClass}">${r.amt}</span>` : ''}
+        <span class="badge ${r.secClass}">${r.secLabel}</span>
+      </div>
+    </div>`).join('');
+}
+
+// ════════════════════════════════════════════
+//  INIT
+// ════════════════════════════════════════════
+function safeRun(fn, name) {
+  try { fn(); } catch(e) { console.warn('render error in', name, e); }
+}
+function init() {
+  safeRun(load,'load');
+  safeRun(initDropdowns,'initDropdowns');
+  safeRun(initMonthFilter,'initMonthFilter');
+  safeRun(setTodayDates,'setTodayDates');
+  try { document.getElementById('main-content').scrollTop=0; } catch(e){}
+  safeRun(renderDashboard,'renderDashboard');
+  safeRun(renderExpList,'renderExpList');
+  safeRun(renderReminders,'renderReminders');
+  safeRun(renderCommitments,'renderCommitments');
+  safeRun(renderNW,'renderNW');
+  safeRun(renderSalary,'renderSalary');
+  safeRun(renderSplits,'renderSplits');
+  safeRun(renderUntracked,'renderUntracked');
+  safeRun(loadSettings,'loadSettings');
+  safeRun(checkAIKey,'checkAIKey');
+  safeRun(renderBudget,'renderBudget');
+  safeRun(renderTriathlon,'renderTriathlon');
+}
+window.addEventListener('load', init);
+</script>
+</body>
+</html>
