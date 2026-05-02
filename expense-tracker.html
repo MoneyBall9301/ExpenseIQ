@@ -1319,6 +1319,7 @@ const BUDGET_BUCKETS = [
   {id:'savings',   name:'Savings Target',  emoji:'💰', isCalc:true,    color:'#22c55e'},
   {id:'invest',    name:'Investments',     emoji:'📈', cats:['Investments / SIP'], color:'#a78bfa'},
   {id:'commits',   name:'Commitments',     emoji:'💼', isCommits:true, color:'#f97316'},
+  {id:'cc',        name:'Credit Card',     emoji:'💳', isCC:true,      color:'#60a5fa'},
   {id:'food',      name:'Food & Dining',   emoji:'🍽️', cats:['Restaurants & Dining','Food Delivery','Snacks','Coffee & Tea','Alcohol & Drinks','Groceries','Tiffin'], color:'#eab308'},
   {id:'shopping',  name:'Shopping',        emoji:'🛍️', cats:['Online Shopping','Retail Shopping','Clothing & Fashion','Electronics & Gadgets','Books & Stationery'], color:'#38bdf8'},
   {id:'fun',       name:'Fun & Leisure',   emoji:'🎬', cats:['Movies & Cinema','Sports & Entertainment','Gaming','Subscriptions / Auto-pay'], color:'#f472b6'},
@@ -1334,7 +1335,7 @@ let D = {
   salary:[], splits:[], untracked:[],
   settings:{ geminiKey:'', model:'gemini-2.0-flash', name:'Pranav', spendLimit:0, warnAt:80 },
   budget:{ useActualSalary:true, customIncome:0,
-    targets:{ savings:20, invest:10, commits:0, food:15, shopping:8, fun:5, transport:5, health:5, bills:5, other:5, tri:5 }
+    targets:{ savings:10, invest:15, commits:35, cc:15, food:10, shopping:5, fun:3, transport:3, health:3, bills:5, other:1, tri:3 }
   }
 };
 let charts = {};
@@ -2480,9 +2481,18 @@ function getBudgetIncome(month) {
   return D.salary.filter(s => s.date && s.date.startsWith(month)).reduce((s, e) => s + e.amt, 0);
 }
 
-function getBucketActual(bucket, expenses) {
+function getBucketActual(bucket, expenses, month) {
   if (bucket.isCalc) return null; // savings is derived
-  if (bucket.isCommits) return D.commitments.filter(c => c.active).reduce((s, c) => s + c.amt, 0);
+  // Commitments bucket: non-SIP active commitments only (SIP is in Investments)
+  if (bucket.isCommits) return D.commitments.filter(c => c.active && !c.isInvestment).reduce((s, c) => s + c.amt, 0);
+  // Investments bucket: expense entries + SIP commitment amounts (handles both tracking styles)
+  if (bucket.id === 'invest') {
+    const expAmt = expenses.filter(e => (bucket.cats||[]).includes(e.cat)).reduce((s, e) => s + e.amt, 0);
+    const sipAmt = D.commitments.filter(c => c.active && c.isInvestment).reduce((s, c) => s + c.amt, 0);
+    return expAmt + sipAmt;
+  }
+  // CC bucket: read directly from all expenses for the month (not filtered out like in expenses array)
+  if (bucket.isCC) return (month ? D.expenses.filter(e => e.date && e.date.startsWith(month) && e.cat === 'Credit Card Payments') : []).reduce((s, e) => s + e.amt, 0);
   return expenses.filter(e => (bucket.cats||[]).includes(e.cat)).reduce((s, e) => s + e.amt, 0);
 }
 
@@ -2497,10 +2507,10 @@ function applyTemplate(tpl) {
   const t = D.budget.targets;
   if (tpl === '502030') {
     // 50% needs, 30% wants, 20% savings
-    Object.assign(t, { savings:20, invest:0, commits:0, food:15, shopping:10, fun:10, transport:7, health:5, bills:8, other:5 });
+    Object.assign(t, { savings:10, invest:5, commits:35, cc:15, food:15, shopping:5, fun:5, transport:3, health:2, bills:3, other:2 });
   } else if (tpl === '702010') {
     // 70% expenses, 20% savings, 10% invest
-    Object.assign(t, { savings:20, invest:10, commits:0, food:18, shopping:10, fun:8, transport:7, health:5, bills:7, other:5 });
+    Object.assign(t, { savings:10, invest:10, commits:35, cc:15, food:12, shopping:5, fun:4, transport:3, health:3, bills:5, other:3 });
   } else if (tpl === 'equal') {
     const each = Math.floor(100 / BUDGET_BUCKETS.length);
     BUDGET_BUCKETS.forEach(b => t[b.id] = each);
@@ -2562,7 +2572,7 @@ function renderBudget() {
   const html = BUDGET_BUCKETS.map(b => {
     const pct = +(D.budget.targets[b.id]||0);
     const targetAmt = income * pct / 100;
-    const actual = getBucketActual(b, expenses);
+    const actual = getBucketActual(b, expenses, month);
     const isSavings = b.isCalc;
 
     // Savings bucket: actual = income - totalSpent
