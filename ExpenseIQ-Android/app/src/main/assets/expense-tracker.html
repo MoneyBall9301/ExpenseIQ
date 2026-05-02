@@ -1554,14 +1554,22 @@ function renderDashboard() {
   const month=_dashEl.value||_curM;
   const mExp=D.expenses.filter(e=>e.date&&e.date.startsWith(month));
   const mSal=D.salary.filter(s=>s.date&&s.date.startsWith(month));
-  const spent=mExp.filter(e=>!['Investments / SIP','Self / Bank Transfers'].includes(e.cat)).reduce((s,e)=>s+e.amt,0);
+  // Categories excluded from "spent" — they are tracked separately
+  const EXCL_SPENT=['Investments / SIP','Self / Bank Transfers','Credit Card Payments'];
+  const spent=mExp.filter(e=>!EXCL_SPENT.includes(e.cat)).reduce((s,e)=>s+e.amt,0);
+  const ccAmt=mExp.filter(e=>e.cat==='Credit Card Payments').reduce((s,e)=>s+e.amt,0);
   const investedExp=mExp.filter(e=>e.cat==='Investments / SIP').reduce((s,e)=>s+e.amt,0);
   // Investment-flagged commitments also count as invested (if not already logged as expense)
   const sipCommits=D.commitments.filter(c=>c.active&&c.isInvestment).reduce((s,c)=>s+c.amt,0);
   const invested=investedExp+sipCommits;
   const income=mSal.reduce((s,e)=>s+e.amt,0);
   const avoidable=mExp.filter(e=>e.avoid==='yes').reduce((s,e)=>s+e.amt,0);
-  const net=income-spent-invested;
+  // Splits received back this month reduce effective spend
+  const receivedBack=D.splits.filter(s=>s.received&&s.receivedDate&&s.receivedDate.startsWith(month)).reduce((s,x)=>s+x.amt,0);
+  // Non-investment active commitments (rent, subscriptions, etc.) reduce savings
+  const nonSipCommits=D.commitments.filter(c=>c.active&&!c.isInvestment).reduce((s,c)=>s+c.amt,0);
+  // Saved = income minus all obligations
+  const net=income-spent-invested-nonSipCommits+receivedBack;
 
   document.getElementById('dash-kpi').innerHTML=`
     <div class="kpi" style="--kpi-color:var(--green)">
@@ -1570,15 +1578,19 @@ function renderDashboard() {
     </div>
     <div class="kpi" style="--kpi-color:var(--red)">
       <div class="k-label">💸 Spent</div><div class="k-val">${INR(spent)}</div>
-      <div class="k-sub">${mExp.length} txns</div>
+      <div class="k-sub">${receivedBack>0?'(-'+INR(receivedBack)+' splits back) ':''}${mExp.length} txns</div>
     </div>
+    ${ccAmt>0?`<div class="kpi" style="--kpi-color:var(--blue)">
+      <div class="k-label">💳 CC Payments</div><div class="k-val">${INR(ccAmt)}</div>
+      <div class="k-sub">excluded from spent</div>
+    </div>`:''}
     <div class="kpi" style="--kpi-color:var(--purple)">
       <div class="k-label">📈 Invested</div><div class="k-val">${INR(invested)}</div>
       <div class="k-sub">${sipCommits>0?`incl. ${INR(sipCommits)} SIP`:'from expenses'}</div>
     </div>
     <div class="kpi" style="--kpi-color:${net>=0?'var(--green)':'var(--red)'}">
       <div class="k-label">🏦 Saved</div><div class="k-val">${INR(Math.abs(net))}</div>
-      <div class="k-sub">${net<0?'⚠️ Over budget':'✅ Saved'}</div>
+      <div class="k-sub">${net<0?'⚠️ Over budget':'✅ after commits'}</div>
     </div>
     <div class="kpi" style="--kpi-color:var(--yellow)">
       <div class="k-label">⚠️ Avoidable</div><div class="k-val">${INR(avoidable)}</div>
