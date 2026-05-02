@@ -1705,7 +1705,8 @@ function renderDashboard() {
   // CC purchases (txtype='credit_card') are also excluded from spent —
   // they will be captured as a cash outflow when the CC bill is paid next month.
   // This avoids double-counting: purchase ₹X in month A + CC payment ₹X in month B.
-  const spent=mExp.filter(e=>!EXCL_SPENT.includes(e.cat)&&e.txtype!=='credit_card').reduce((s,e)=>s+e.amt,0);
+  // Spent = personal discretionary only — excludes commitments (logged or not), investments, CC payments, CC purchases
+  const spent=mExp.filter(e=>!EXCL_SPENT.includes(e.cat)&&e.txtype!=='credit_card'&&!e._commitId).reduce((s,e)=>s+e.amt,0);
   const ccPurchases=mExp.filter(e=>!EXCL_SPENT.includes(e.cat)&&e.txtype==='credit_card').reduce((s,e)=>s+e.amt,0);
   const ccAmt=mExp.filter(e=>e.cat==='Credit Card Payments').reduce((s,e)=>s+e.amt,0);
   const investedExp=mExp.filter(e=>e.cat==='Investments / SIP').reduce((s,e)=>s+e.amt,0);
@@ -1717,10 +1718,9 @@ function renderDashboard() {
   // Splits received back this month — subtract from gross spent to get net spent
   const receivedBack=D.splits.filter(s=>s.received&&s.receivedDate&&s.receivedDate.startsWith(month)).reduce((s,x)=>s+x.amt,0);
   const netSpent=Math.max(spent-receivedBack,0);
-  // Non-investment active commitments (rent, subscriptions, etc.) reduce savings
-  // Exclude any that were already logged as expenses this month (avoid double-counting)
-  const loggedCommitIds=new Set(mExp.filter(e=>e._commitId).map(e=>e._commitId));
-  const nonSipCommits=D.commitments.filter(c=>c.active&&!c.isInvestment&&!loggedCommitIds.has(c.id)).reduce((s,c)=>s+c.amt,0);
+  // Non-investment active commitments (rent, loans, subscriptions) — always use definition amounts
+  // These are NEVER in spent (logged commitment expenses are excluded from spent above)
+  const nonSipCommits=D.commitments.filter(c=>c.active&&!c.isInvestment).reduce((s,c)=>s+c.amt,0);
   // Available cash = income minus actual outflows (CC included as real bank deduction)
   const net=income-netSpent-ccAmt-invested;
   // Projected surplus after planned commits
@@ -2087,7 +2087,7 @@ function saveExpense(ev) {
   const _sl=+(D.settings.spendLimit||0);
   if(_sl>0){
     const _curMonth=new Date().toISOString().slice(0,7);
-    const _spent=D.expenses.filter(e=>e.date&&e.date.startsWith(_curMonth)&&!['Investments / SIP','Self / Bank Transfers','Credit Card Payments'].includes(e.cat)&&e.txtype!=='credit_card').reduce((s,e)=>s+e.amt,0);
+    const _spent=D.expenses.filter(e=>e.date&&e.date.startsWith(_curMonth)&&!['Investments / SIP','Self / Bank Transfers','Credit Card Payments'].includes(e.cat)&&e.txtype!=='credit_card'&&!e._commitId).reduce((s,e)=>s+e.amt,0);
     const _pct=(_spent/_sl)*100;
     const _warn=+(D.settings.warnAt||80);
     if(_spent>_sl) toast(`🔴 Over limit! Spent ${INR(_spent)} of ${INR(_sl)} limit`,'err');
@@ -2914,16 +2914,14 @@ function renderBudget() {
   // True available — mirrors dashboard formula so Savings bucket stays consistent
   const _mExp    = D.expenses.filter(e => e.date && e.date.startsWith(month));
   const _EXCL    = ['Investments / SIP','Self / Bank Transfers','Credit Card Payments'];
-  // Bug 1 fix: exclude already-logged commitments from nonSip (avoid double-count)
-  const _loggedCIds=new Set(_mExp.filter(e=>e._commitId).map(e=>e._commitId));
-  // Bug 2 fix: CC purchases excluded from spent (captured when CC bill paid)
-  const _netSpent= Math.max(_mExp.filter(e=>!_EXCL.includes(e.cat)&&e.txtype!=='credit_card').reduce((s,e)=>s+e.amt,0)
+  // Spent = personal discretionary (exclude commitments, CC purchases, investments)
+  const _netSpent= Math.max(_mExp.filter(e=>!_EXCL.includes(e.cat)&&e.txtype!=='credit_card'&&!e._commitId).reduce((s,e)=>s+e.amt,0)
                    - D.splits.filter(s=>s.received&&s.receivedDate&&s.receivedDate.startsWith(month)).reduce((s,x)=>s+x.amt,0), 0);
   const _ccAmt   = _mExp.filter(e=>e.cat==='Credit Card Payments').reduce((s,e)=>s+e.amt,0);
   const _sipC    = D.commitments.filter(c=>c.active&&c.isInvestment).reduce((s,c)=>s+c.amt,0);
   const _invExp  = _mExp.filter(e=>e.cat==='Investments / SIP').reduce((s,e)=>s+e.amt,0);
   const _invested= _invExp + _sipC;
-  const _nonSip  = D.commitments.filter(c=>c.active&&!c.isInvestment&&!_loggedCIds.has(c.id)).reduce((s,c)=>s+c.amt,0);
+  const _nonSip  = D.commitments.filter(c=>c.active&&!c.isInvestment).reduce((s,c)=>s+c.amt,0);
   const trueAvail= income - _netSpent - _ccAmt - _invested - _nonSip;
 
   // Income display
