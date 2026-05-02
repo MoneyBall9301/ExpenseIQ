@@ -695,6 +695,27 @@ mark { background:rgba(56,189,248,0.25); color:var(--accent); border-radius:3px;
     <div id="update-status" style="margin-top:8px;font-size:12px;color:var(--muted)"></div>
   </div>
 
+  <div class="card" id="notif-card">
+    <div class="card-title">🔔 Notifications</div>
+    <div id="notif-status" style="font-size:13px;color:var(--muted);margin-bottom:10px">Checking permission…</div>
+    <div class="btn-row" id="notif-perm-row" style="display:none">
+      <button class="btn btn-primary" onclick="requestNotifPerm()">Enable Notifications</button>
+    </div>
+    <div id="notif-settings" style="display:none">
+      <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px">Daily Reminder</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Get a daily summary notification — useful if you forget to check spending.</div>
+      <div class="form-row" style="display:flex;gap:8px;align-items:center">
+        <label style="font-size:13px;color:var(--text);flex:1">Reminder time</label>
+        <input type="time" id="notif-time" value="20:00" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:6px 10px;font-size:13px">
+      </div>
+      <div class="btn-row" style="margin-top:10px">
+        <button class="btn btn-primary" onclick="setDailyReminder()">🔔 Set Reminder</button>
+        <button class="btn btn-ghost" onclick="cancelDailyReminder()">🔕 Cancel</button>
+      </div>
+      <div id="notif-reminder-status" style="font-size:12px;color:var(--muted);margin-top:6px"></div>
+    </div>
+  </div>
+
   <div class="card">
     <div class="card-title">🔧 JS Patch <span style="font-size:11px;font-weight:400;color:var(--muted)">(advanced)</span></div>
     <div class="form-row">
@@ -1716,6 +1737,22 @@ function renderDashboard() {
 
   const sevColor={red:'#ef4444',yellow:'#f59e0b',green:'#22c55e',info:'var(--blue)'};
   const sevBg={red:'rgba(239,68,68,0.08)',yellow:'rgba(245,158,11,0.08)',green:'rgba(34,197,94,0.08)',info:'rgba(96,165,250,0.08)'};
+  // Push warning data to Android for daily notification
+  if(typeof Android!=='undefined') {
+    const redWarns=warns.filter(w=>w.sev==='red');
+    const topWarn=warns.length>0?warns[0].title+': '+warns[0].body:'All clear this month!';
+    Android.updateNotificationData(warns.filter(w=>w.sev==='red'||w.sev==='yellow').length, topWarn);
+    // Show immediate notification only for red (critical) alerts, once per session
+    if(redWarns.length>0&&!sessionStorage.getItem('notif_shown')) {
+      sessionStorage.setItem('notif_shown','1');
+      Android.showNotification(
+        'ExpenseIQ: '+redWarns.length+' critical alert'+(redWarns.length>1?'s':''),
+        redWarns[0].title+' — '+redWarns[0].body,
+        2001
+      );
+    }
+  }
+
   const insEl=document.getElementById('dash-insights');
   insEl.innerHTML=warns.length?`<div class="card" style="padding:12px 16px">
     <div style="font-weight:600;font-size:13px;color:var(--muted);margin-bottom:10px;letter-spacing:.05em">⚡ ALERTS & INSIGHTS (${warns.length})</div>
@@ -2861,6 +2898,7 @@ function clearChat(){document.getElementById('chat-msgs').innerHTML=`<div class=
 //  SETTINGS
 // ════════════════════════════════════════════
 function loadSettings() {
+  safeRun(initNotifSettings,'initNotifSettings');
   document.getElementById('set-gemini').value=D.settings.geminiKey||'';
   document.getElementById('set-name').value=D.settings.name||'Pranav';
   document.getElementById('set-limit').value=D.settings.spendLimit||'';
@@ -3304,6 +3342,61 @@ function revertToBuiltin() {
     toast('ℹ️ No Android bridge — delete the update file manually','err');
   }
 }
+function initNotifSettings() {
+  if(typeof Android==='undefined') {
+    document.getElementById('notif-status').textContent='Notifications available on Android app only.';
+    return;
+  }
+  const hasPerm = Android.hasNotificationPermission();
+  const isEnabled = Android.isDailyReminderEnabled();
+  const reminderTime = Android.getDailyReminderTime();
+  if(!hasPerm) {
+    document.getElementById('notif-status').textContent='Notification permission not granted.';
+    document.getElementById('notif-perm-row').style.display='flex';
+    document.getElementById('notif-settings').style.display='none';
+  } else {
+    document.getElementById('notif-status').textContent='✅ Notifications enabled';
+    document.getElementById('notif-perm-row').style.display='none';
+    document.getElementById('notif-settings').style.display='block';
+    if(reminderTime) {
+      document.getElementById('notif-time').value=reminderTime;
+      document.getElementById('notif-reminder-status').textContent='🔔 Daily reminder set for '+reminderTime;
+    } else {
+      document.getElementById('notif-reminder-status').textContent='No daily reminder set.';
+    }
+  }
+}
+
+window.onNotifPermResult = function(granted) {
+  if(granted) {
+    document.getElementById('notif-status').textContent='✅ Notifications enabled';
+    document.getElementById('notif-perm-row').style.display='none';
+    document.getElementById('notif-settings').style.display='block';
+    document.getElementById('notif-reminder-status').textContent='No daily reminder set.';
+  } else {
+    document.getElementById('notif-status').textContent='❌ Permission denied. Enable in Android Settings → Apps → ExpenseIQ.';
+  }
+};
+
+function requestNotifPerm() {
+  if(typeof Android!=='undefined') Android.requestNotificationPermission();
+}
+
+function setDailyReminder() {
+  if(typeof Android==='undefined') return;
+  const t=document.getElementById('notif-time').value||'20:00';
+  const [h,m]=t.split(':').map(Number);
+  Android.scheduleDailyReminder(h,m);
+  document.getElementById('notif-reminder-status').textContent='🔔 Daily reminder set for '+t;
+}
+
+function cancelDailyReminder() {
+  if(typeof Android==='undefined') return;
+  Android.cancelDailyReminder();
+  document.getElementById('notif-reminder-status').textContent='No daily reminder set.';
+  document.getElementById('notif-time').value='20:00';
+}
+
 function applyJSPatch() {
   const code=(document.getElementById('set-patch')?.value||'').trim();
   if(!code){toast('⚠️ Nothing to patch');return;}

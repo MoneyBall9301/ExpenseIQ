@@ -1,24 +1,48 @@
 package com.expenseiq.app
 
 import android.annotation.SuppressLint
+import android.app.AlarmManager
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.ContentValues
 import android.content.Context
+import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
 import android.util.Base64
 import android.view.KeyEvent
 import android.webkit.*
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import java.io.File
+import java.util.Calendar
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var webView: WebView
     private val UPDATE_FILENAME = "expenseiq-update.html"
+    private val CHANNEL_ID = "expenseiq_alerts"
+    private val PREFS_NAME = "expenseiq_notif"
+
+    // Android 13+ permission launcher
+    private val notifPermLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        val msg = if (granted) "✅ Notifications enabled!" else "❌ Notification permission denied."
+        runOnUiThread { Toast.makeText(this, msg, Toast.LENGTH_SHORT).show() }
+        // Tell the JS side what happened
+        webView.post {
+            webView.evaluateJavascript("if(window.onNotifPermResult)window.onNotifPermResult($granted);", null)
+        }
+    }
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -29,6 +53,9 @@ class MainActivity : AppCompatActivity() {
         window.statusBarColor = android.graphics.Color.parseColor("#0f172a")
         window.navigationBarColor = android.graphics.Color.parseColor("#0f172a")
         WindowInsetsControllerCompat(window, window.decorView).isAppearanceLightStatusBars = false
+
+        // ── Create notification channel (required for Android 8+) ──
+        createNotificationChannel()
 
         webView = WebView(this)
         setContentView(webView)
@@ -125,6 +152,18 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun createNotificationChannel() {
+        val channel = NotificationChannel(
+            CHANNEL_ID,
+            "ExpenseIQ Alerts",
+            NotificationManager.IMPORTANCE_DEFAULT
+        ).apply {
+            description = "Spend limit alerts, daily summaries, and financial warnings"
+        }
+        val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        nm.createNotificationChannel(channel)
+    }
+
     // ── Back button navigates within WebView ──────────────────────
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
         if (keyCode == KeyEvent.KEYCODE_BACK && webView.canGoBack()) {
@@ -153,43 +192,4 @@ class MainActivity : AppCompatActivity() {
                     resolver.openOutputStream(it)?.use { stream -> stream.write(bytes) }
                     values.clear()
                     values.put(MediaStore.Downloads.IS_PENDING, 0)
-                    resolver.update(it, values, null, null)
-                    runOnUiThread {
-                        Toast.makeText(ctx, "✅ Saved to Downloads: $filename", Toast.LENGTH_LONG).show()
-                    }
-                }
-            } catch (e: Exception) {
-                runOnUiThread {
-                    Toast.makeText(ctx, "❌ Save failed: ${e.message}", Toast.LENGTH_LONG).show()
-                }
-            }
-        }
-
-        /** Write a full HTML update to internal storage */
-        @JavascriptInterface
-        fun writeUpdateHtml(content: String) {
-            try {
-                val file = File(ctx.filesDir, UPDATE_FILENAME)
-                file.writeText(content, Charsets.UTF_8)
-                runOnUiThread {
-                    Toast.makeText(ctx, "✅ Update saved! Close & reopen app to apply.", Toast.LENGTH_LONG).show()
-                }
-            } catch (e: Exception) {
-                runOnUiThread {
-                    Toast.makeText(ctx, "❌ Update save failed: ${e.message}", Toast.LENGTH_LONG).show()
-                }
-            }
-        }
-
-        /** Check whether a downloaded update is active */
-        @JavascriptInterface
-        fun hasUpdate(): Boolean = File(ctx.filesDir, UPDATE_FILENAME).exists()
-
-        /** Return ISO timestamp of the saved update, or "" if none */
-        @JavascriptInterface
-        fun updateTimestamp(): String {
-            val file = File(ctx.filesDir, UPDATE_FILENAME)
-            return if (file.exists()) java.util.Date(file.lastModified()).toString() else ""
-        }
-
-        /** Delete the stored update — reverts to bundled version o
+                    resolver.update(it, values, null, nul
