@@ -620,6 +620,11 @@ mark { background:rgba(56,189,248,0.25); color:var(--accent); border-radius:3px;
 <!-- SETTINGS -->
 <div class="tab" id="tab-settings">
   <div class="card">
+    <div class="card-title">💳 Credit Cards</div>
+    <div id="cc-cards-list" style="margin-bottom:10px"></div>
+    <button class="btn btn-ghost btn-sm" onclick="openCCCardSheet(null)" style="width:100%">+ Add Card</button>
+  </div>
+  <div class="card">
     <div class="card-title">🤖 Gemini AI</div>
     <div class="form-row">
       <label>API Key</label>
@@ -943,6 +948,41 @@ mark { background:rgba(56,189,248,0.25); color:var(--accent); border-radius:3px;
   </button>
 </nav>
 
+<!-- CC CARD SHEET -->
+<div class="bottom-sheet" id="sheet-cc-card">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header">
+    <span class="sheet-title" id="cc-card-sheet-title">Add Card</span>
+    <button class="sheet-close" onclick="closeSheet()">✕</button>
+  </div>
+  <input type="hidden" id="cc-card-edit-id">
+  <div class="sheet-body">
+    <div class="form-row">
+      <label>Card Name</label>
+      <input type="text" id="cc-card-name" placeholder="e.g. HDFC Regalia, SBI SimplyCLICK…">
+    </div>
+    <div class="form-row" style="display:flex;gap:10px">
+      <div style="flex:1">
+        <label>Last 4 Digits</label>
+        <input type="text" id="cc-card-last4" placeholder="1234" maxlength="4" inputmode="numeric">
+      </div>
+      <div style="flex:1">
+        <label>Credit Limit (₹)</label>
+        <input type="number" id="cc-card-limit" placeholder="0" inputmode="numeric">
+      </div>
+    </div>
+    <div class="form-row">
+      <label>Current Outstanding (₹)</label>
+      <input type="number" id="cc-card-balance" placeholder="0" inputmode="numeric">
+      <div style="font-size:11px;color:var(--muted);margin-top:4px">Enter the amount you currently owe on this card — future purchases and payments will be tracked from here.</div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-ghost" onclick="closeSheet()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveCCCard()">Save Card</button>
+    </div>
+  </div>
+</div>
+
 <!-- SHEET OVERLAY -->
 <div class="sheet-overlay" id="sheet-overlay" onclick="overlayClose()"></div>
 
@@ -967,7 +1007,7 @@ mark { background:rgba(56,189,248,0.25); color:var(--accent); border-radius:3px;
       </div>
       <div class="form-row">
         <label>🏷️ Category</label>
-        <select id="e-cat" required><option value="">Select…</option></select>
+        <select id="e-cat" onchange="onCatChange()" required><option value="">Select…</option></select>
       </div>
       <div class="form-row">
         <label>📝 Description</label>
@@ -986,6 +1026,19 @@ mark { background:rgba(56,189,248,0.25); color:var(--accent); border-radius:3px;
           <option value="upi">📱 UPI</option>
           <option value="bank_transfer">🏦 Bank Transfer</option>
           <option value="auto_mandate">🔄 Auto Mandate</option>
+        </select>
+      </div>
+      <div class="form-row" id="cc-card-wrap" style="display:none">
+        <label>💳 Which Card?</label>
+        <select id="e-cc-card">
+          <option value="">Select card…</option>
+        </select>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">Don't see your card? Add it in Settings → Credit Cards.</div>
+      </div>
+      <div class="form-row" id="cc-payment-wrap" style="display:none">
+        <label>💳 Paying Which Card?</label>
+        <select id="e-cc-payment-card">
+          <option value="">Select card…</option>
         </select>
       </div>
       <div class="form-row" id="emi-wrap" style="display:none">
@@ -1387,7 +1440,7 @@ const BUDGET_BUCKETS = [
 
 let D = {
   expenses:[], reminders:[], commitments:[], needWant:[],
-  salary:[], splits:[], untracked:[], projects:[],
+  salary:[], splits:[], untracked:[], projects:[], creditCards:[],
   settings:{ geminiKey:'', model:'gemini-2.0-flash', name:'Pranav', spendLimit:0, warnAt:80 },
   budget:{ useActualSalary:true, customIncome:0,
     targets:{ savings:10, invest:15, commits:35, cc:15, food:10, shopping:5, fun:3, transport:3, health:3, bills:5, other:1, tri:3 }
@@ -1705,6 +1758,29 @@ function renderDashboard() {
       <div class="k-sub">${((nonSipCommits+sipCommits)/income*100).toFixed(0)}% of income</div>
     </div>
     ${(()=>{
+      const cards=D.creditCards||[];
+      if(!cards.length) return '';
+      const totalOut=cards.reduce((s,c)=>s+getCCOutstanding(c.id),0);
+      const totalLim=cards.reduce((s,c)=>s+(c.limit||0),0);
+      const utilPct=totalLim>0?Math.min(totalOut/totalLim*100,100):0;
+      const col=utilPct>80?'var(--red)':utilPct>50?'var(--yellow)':'var(--blue)';
+      const perCard=cards.map(c=>{
+        const out=getCCOutstanding(c.id);
+        return out>0?`<div style="font-size:10px;color:var(--muted)">${c.name}${c.lastFour?' ···'+c.lastFour:''}: ${INR(out)}</div>`:'';
+      }).join('');
+      return `<div class="kpi" style="--kpi-color:${col};grid-column:1/-1">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+          <div class="k-label">💳 CC Outstanding</div>
+          <div style="font-size:16px;font-weight:800;color:${col}">${INR(totalOut)}</div>
+        </div>
+        ${totalLim>0?`<div style="background:var(--surface2);border-radius:99px;height:5px;overflow:hidden;margin-bottom:5px">
+          <div style="height:100%;width:${utilPct.toFixed(1)}%;background:${col};border-radius:99px"></div>
+        </div>`:''}
+        ${perCard}
+        <div style="font-size:10px;color:var(--muted);margin-top:3px">Tap Settings → Credit Cards to update</div>
+      </div>`;
+    })()}
+    ${(()=>{
       const lim=+(D.settings.spendLimit||0);
       if(!lim) return '';
       const pct=Math.min((netSpent/lim)*100,100);
@@ -1954,15 +2030,52 @@ function renderCharts(expenses,month) {
 // ════════════════════════════════════════════
 //  EXPENSES
 // ════════════════════════════════════════════
+function populateCCSelector(selId) {
+  const sel = document.getElementById(selId);
+  if (!sel) return;
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">Select card…</option>' +
+    (D.creditCards||[]).map(c=>`<option value="${c.id}">${c.name}${c.lastFour?' ···'+c.lastFour:''}</option>`).join('');
+  if (cur) sel.value = cur;
+}
 function toggleEMI() {
-  document.getElementById('emi-wrap').style.display=document.getElementById('e-txtype').value==='credit_card'?'flex':'none';
+  const txtype = document.getElementById('e-txtype').value;
+  const isCC = txtype === 'credit_card';
+  document.getElementById('emi-wrap').style.display = isCC ? 'flex' : 'none';
+  const ccWrap = document.getElementById('cc-card-wrap');
+  if (ccWrap) {
+    ccWrap.style.display = isCC ? 'flex' : 'none';
+    if (isCC) populateCCSelector('e-cc-card');
+  }
+  // If switching away from CC, hide payment selector too
+  if (!isCC) {
+    const pw = document.getElementById('cc-payment-wrap');
+    if (pw) pw.style.display = 'none';
+  }
+}
+function onCatChange() {
+  const cat = document.getElementById('e-cat').value;
+  const isPayment = cat === 'Credit Card Payments';
+  const pw = document.getElementById('cc-payment-wrap');
+  if (pw) {
+    pw.style.display = isPayment ? 'flex' : 'none';
+    if (isPayment) populateCCSelector('e-cc-payment-card');
+  }
 }
 function saveExpense(ev) {
   ev.preventDefault();
+  const _txtype=document.getElementById('e-txtype').value;
+  const _cat=document.getElementById('e-cat').value;
+  const _ccCardId=_txtype==='credit_card'
+    ? document.getElementById('e-cc-card').value
+    : _cat==='Credit Card Payments'
+      ? (document.getElementById('e-cc-payment-card').value||'')
+      : '';
   const exp={
     id:editExpId||uid(), date:document.getElementById('e-date').value,
-    cat:document.getElementById('e-cat').value, desc:document.getElementById('e-desc').value,
-    why:document.getElementById('e-why').value, txtype:document.getElementById('e-txtype').value,
+    cat:_cat, desc:document.getElementById('e-desc').value,
+    why:document.getElementById('e-why').value, txtype:_txtype,
+    ccCardId:_ccCardId,
     emiMonths:parseInt(document.getElementById('e-emi').value)||null,
     amt:parseFloat(document.getElementById('e-amt').value), avoid:document.getElementById('e-avoid').value,
   };
@@ -1987,6 +2100,8 @@ function saveExpense(ev) {
 function resetExpForm() {
   document.getElementById('exp-form').reset(); setTodayDates();
   document.getElementById('emi-wrap').style.display='none';
+  const ccw=document.getElementById('cc-card-wrap'); if(ccw) ccw.style.display='none';
+  const cpw=document.getElementById('cc-payment-wrap'); if(cpw) cpw.style.display='none';
   document.getElementById('exp-sheet-title').textContent='➕ Add Expense';
   editExpId=null;
 }
@@ -1998,6 +2113,14 @@ function editExp(id) {
   document.getElementById('e-desc').value=e.desc;
   document.getElementById('e-why').value=e.why||'';
   document.getElementById('e-txtype').value=e.txtype;
+  toggleEMI(); onCatChange();
+  if(e.txtype==='credit_card'&&e.ccCardId){
+    populateCCSelector('e-cc-card');
+    const ccSel=document.getElementById('e-cc-card'); if(ccSel) ccSel.value=e.ccCardId;
+  } else if(e.cat==='Credit Card Payments'&&e.ccCardId){
+    populateCCSelector('e-cc-payment-card');
+    const cpSel=document.getElementById('e-cc-payment-card'); if(cpSel) cpSel.value=e.ccCardId;
+  }
   document.getElementById('e-amt').value=e.amt;
   document.getElementById('e-avoid').value=e.avoid;
   if(e.emiMonths) document.getElementById('e-emi').value=e.emiMonths;
@@ -3183,8 +3306,86 @@ function clearChat(){document.getElementById('chat-msgs').innerHTML=`<div class=
 // ════════════════════════════════════════════
 //  SETTINGS
 // ════════════════════════════════════════════
+// ════════════════════════════════════════════
+//  CREDIT CARD MANAGEMENT
+// ════════════════════════════════════════════
+function getCCOutstanding(cardId) {
+  const card = (D.creditCards||[]).find(c=>c.id===cardId);
+  if (!card) return 0;
+  const purchases = D.expenses.filter(e=>e.ccCardId===cardId&&e.txtype==='credit_card').reduce((s,e)=>s+e.amt,0);
+  const payments  = D.expenses.filter(e=>e.ccCardId===cardId&&e.cat==='Credit Card Payments').reduce((s,e)=>s+e.amt,0);
+  return Math.max(0, (card.initialBalance||0) + purchases - payments);
+}
+
+function openCCCardSheet(id) {
+  const card = id ? (D.creditCards||[]).find(c=>c.id===id) : null;
+  document.getElementById('cc-card-sheet-title').textContent = card ? 'Edit Card' : 'Add Card';
+  document.getElementById('cc-card-edit-id').value = card ? card.id : '';
+  document.getElementById('cc-card-name').value = card ? card.name : '';
+  document.getElementById('cc-card-last4').value = card ? (card.lastFour||'') : '';
+  document.getElementById('cc-card-limit').value = card ? (card.limit||'') : '';
+  document.getElementById('cc-card-balance').value = card ? (card.initialBalance||'') : '';
+  openSheet('sheet-cc-card');
+}
+
+function saveCCCard() {
+  const id = document.getElementById('cc-card-edit-id').value;
+  const name = document.getElementById('cc-card-name').value.trim();
+  if (!name) { toast('Enter a card name','err'); return; }
+  if (!D.creditCards) D.creditCards = [];
+  const data = {
+    name,
+    lastFour: document.getElementById('cc-card-last4').value.trim(),
+    limit: +(document.getElementById('cc-card-limit').value||0),
+    initialBalance: +(document.getElementById('cc-card-balance').value||0),
+  };
+  if (id) {
+    const i = D.creditCards.findIndex(c=>c.id===id);
+    if (i>-1) D.creditCards[i] = {...D.creditCards[i], ...data};
+  } else {
+    D.creditCards.push({id:uid(), ...data});
+  }
+  save(); closeSheet(); renderCCCardsList(); toast('✅ Card saved!');
+}
+
+function deleteCCCard(id) {
+  if (!confirm('Delete this card? Purchase history will remain but won\'t be linked to a card.')) return;
+  D.creditCards = (D.creditCards||[]).filter(c=>c.id!==id);
+  save(); renderCCCardsList(); toast('🗑️ Card deleted');
+}
+
+function renderCCCardsList() {
+  const el = document.getElementById('cc-cards-list');
+  if (!el) return;
+  if (!D.creditCards || D.creditCards.length===0) {
+    el.innerHTML='<div style="font-size:13px;color:var(--muted);text-align:center;padding:8px">No cards yet. Tap + Add Card to get started.</div>';
+    return;
+  }
+  el.innerHTML = D.creditCards.map(card => {
+    const outstanding = getCCOutstanding(card.id);
+    const utilPct = card.limit > 0 ? Math.min(outstanding/card.limit*100,100) : 0;
+    const col = utilPct > 80 ? 'var(--red)' : utilPct > 50 ? 'var(--yellow)' : 'var(--green)';
+    return `<div style="padding:10px 0;border-bottom:1px solid var(--surface2)">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:20px">💳</span>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:700">${card.name}${card.lastFour?' ···'+card.lastFour:''}</div>
+          <div style="font-size:12px;color:var(--red);font-weight:600">Outstanding: ${INR(outstanding)}</div>
+          ${card.limit>0?`<div style="font-size:11px;color:var(--muted)">${utilPct.toFixed(0)}% of ${INR(card.limit)} limit used</div>`:''}
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="openCCCardSheet('${card.id}')">✏️</button>
+        <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="deleteCCCard('${card.id}')">🗑️</button>
+      </div>
+      ${card.limit>0?`<div style="margin-top:6px;background:var(--surface2);border-radius:99px;height:4px;overflow:hidden">
+        <div style="height:100%;width:${utilPct.toFixed(1)}%;background:${col};border-radius:99px"></div>
+      </div>`:''}
+    </div>`;
+  }).join('');
+}
+
 function loadSettings() {
   safeRun(initNotifSettings,'initNotifSettings');
+  safeRun(renderCCCardsList,'renderCCCardsList');
   document.getElementById('set-gemini').value=D.settings.geminiKey||'';
   document.getElementById('set-name').value=D.settings.name||'Pranav';
   document.getElementById('set-limit').value=D.settings.spendLimit||'';
