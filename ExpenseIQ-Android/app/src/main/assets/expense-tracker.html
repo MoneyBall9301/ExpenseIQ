@@ -3269,7 +3269,7 @@ function renderHeatBar() {
   // Cool-down tip
   const coolDays = Math.max(0, Math.ceil((score / 6) - daysSince));
   const tip = score <= 15
-    ? 'No avoidable spends — you're in the zone! 🎯'
+    ? 'No avoidable spends \u2014 you\'re in the zone! 🎯'
     : daysSince < 1
       ? 'Avoid unnecessary spending today to start cooling down.'
       : coolDays > 0
