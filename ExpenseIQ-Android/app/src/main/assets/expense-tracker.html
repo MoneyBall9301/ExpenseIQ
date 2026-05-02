@@ -1564,12 +1564,13 @@ function renderDashboard() {
   const invested=investedExp+sipCommits;
   const income=mSal.reduce((s,e)=>s+e.amt,0);
   const avoidable=mExp.filter(e=>e.avoid==='yes').reduce((s,e)=>s+e.amt,0);
-  // Splits received back this month reduce effective spend
+  // Splits received back this month — subtract from gross spent to get net spent
   const receivedBack=D.splits.filter(s=>s.received&&s.receivedDate&&s.receivedDate.startsWith(month)).reduce((s,x)=>s+x.amt,0);
+  const netSpent=Math.max(spent-receivedBack,0);
   // Non-investment active commitments (rent, subscriptions, etc.) reduce savings
   const nonSipCommits=D.commitments.filter(c=>c.active&&!c.isInvestment).reduce((s,c)=>s+c.amt,0);
-  // Saved = income minus all obligations
-  const net=income-spent-invested-nonSipCommits+receivedBack;
+  // Saved = income minus all obligations (using net spent)
+  const net=income-netSpent-invested-nonSipCommits;
 
   document.getElementById('dash-kpi').innerHTML=`
     <div class="kpi" style="--kpi-color:var(--green)">
@@ -1577,8 +1578,8 @@ function renderDashboard() {
       <div class="k-sub">${mSal.length} credit(s)</div>
     </div>
     <div class="kpi" style="--kpi-color:var(--red)">
-      <div class="k-label">💸 Spent</div><div class="k-val">${INR(spent)}</div>
-      <div class="k-sub">${receivedBack>0?'(-'+INR(receivedBack)+' splits back) ':''}${mExp.length} txns</div>
+      <div class="k-label">💸 Spent</div><div class="k-val">${INR(netSpent)}</div>
+      <div class="k-sub">${receivedBack>0?INR(spent)+' - '+INR(receivedBack)+' splits = net · ':''}${mExp.length} txns</div>
     </div>
     ${ccAmt>0?`<div class="kpi" style="--kpi-color:var(--blue)">
       <div class="k-label">💳 CC Payments</div><div class="k-val">${INR(ccAmt)}</div>
@@ -1602,11 +1603,11 @@ function renderDashboard() {
     ${(()=>{
       const lim=+(D.settings.spendLimit||0);
       if(!lim) return '';
-      const pct=Math.min((spent/lim)*100,100);
+      const pct=Math.min((netSpent/lim)*100,100);
       const warn=+(D.settings.warnAt||80);
-      const over=spent>lim;
+      const over=netSpent>lim;
       const col=over?'var(--red)':pct>=warn?'var(--yellow)':'var(--green)';
-      const rem=Math.max(lim-spent,0);
+      const rem=Math.max(lim-netSpent,0);
       return `<div class="kpi" style="--kpi-color:${col};grid-column:1/-1">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
           <div class="k-label">🎯 Spend Limit</div>
@@ -1616,7 +1617,7 @@ function renderDashboard() {
           <div style="height:100%;width:${pct.toFixed(1)}%;background:${col};border-radius:99px;transition:width 0.4s"></div>
         </div>
         <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted)">
-          <span>${INR(spent)} spent</span><span>${INR(lim)} limit · ${pct.toFixed(0)}%</span>
+          <span>${INR(netSpent)} spent</span><span>${INR(lim)} limit · ${pct.toFixed(0)}%</span>
         </div>
       </div>`;
     })()}`;
