@@ -8,6 +8,7 @@ import android.app.PendingIntent
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
@@ -31,6 +32,17 @@ class MainActivity : AppCompatActivity() {
     private val UPDATE_FILENAME = "expenseiq-update.html"
     private val CHANNEL_ID = "expenseiq_alerts"
     private val PREFS_NAME = "expenseiq_notif"
+
+    // File chooser support for <input type="file">
+    private var fileChooserCallback: ValueCallback<Array<Uri>>? = null
+    private val fileChooserLauncher = registerForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri ->
+        val cb = fileChooserCallback
+        fileChooserCallback = null
+        if (uri != null) cb?.onReceiveValue(arrayOf(uri))
+        else cb?.onReceiveValue(null)
+    }
 
     // Android 13+ permission launcher
     private val notifPermLauncher = registerForActivityResult(
@@ -97,6 +109,18 @@ class MainActivity : AppCompatActivity() {
                     .setNegativeButton("Cancel") { _, _ -> result.cancel() }
                     .setOnCancelListener { result.cancel() }
                     .show()
+                return true
+            }
+
+            override fun onShowFileChooser(
+                view: WebView,
+                callback: ValueCallback<Array<Uri>>,
+                params: FileChooserParams
+            ): Boolean {
+                // Cancel any previous pending callback
+                fileChooserCallback?.onReceiveValue(null)
+                fileChooserCallback = callback
+                fileChooserLauncher.launch("*/*")
                 return true
             }
         }
@@ -173,23 +197,4 @@ class MainActivity : AppCompatActivity() {
         ).apply {
             description = "Spend limit alerts, daily summaries, and financial warnings"
         }
-        val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        nm.createNotificationChannel(channel)
-    }
-
-    // ── Back button navigates within WebView ──────────────────────
-    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
-        if (keyCode == KeyEvent.KEYCODE_BACK && webView.canGoBack()) {
-            webView.goBack()
-            return true
-        }
-        return super.onKeyDown(keyCode, event)
-    }
-
-    // ── JavaScript ↔ Kotlin bridge ────────────────────────────────
-    inner class AndroidBridge(private val ctx: Context) {
-
-        /** Save CSV / JSON downloads to the Downloads folder */
-        @JavascriptInterface
-        fun saveFile(filename: String, base64Data: String, mimeType: String) {
-         
+  
