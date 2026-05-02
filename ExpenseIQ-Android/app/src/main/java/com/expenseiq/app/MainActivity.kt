@@ -150,6 +150,19 @@ class MainActivity : AppCompatActivity() {
         } else {
             webView.loadUrl("file:///android_asset/expense-tracker.html")
         }
+
+        // ── Auto-prompt for notification permission on first launch ──
+        // Only on Android 13+; ask once after the WebView has loaded
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val askedBefore = prefs.getBoolean("notif_asked", false)
+            if (!askedBefore && !NotificationManagerCompat.from(this).areNotificationsEnabled()) {
+                prefs.edit().putBoolean("notif_asked", true).apply()
+                webView.postDelayed({
+                    notifPermLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                }, 2000) // 2 s delay so the app finishes loading first
+            }
+        }
     }
 
     private fun createNotificationChannel() {
@@ -179,17 +192,4 @@ class MainActivity : AppCompatActivity() {
         /** Save CSV / JSON downloads to the Downloads folder */
         @JavascriptInterface
         fun saveFile(filename: String, base64Data: String, mimeType: String) {
-            try {
-                val bytes = Base64.decode(base64Data, Base64.DEFAULT)
-                val values = ContentValues().apply {
-                    put(MediaStore.Downloads.DISPLAY_NAME, filename)
-                    put(MediaStore.Downloads.MIME_TYPE, mimeType)
-                    put(MediaStore.Downloads.IS_PENDING, 1)
-                }
-                val resolver = ctx.contentResolver
-                val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
-                uri?.let {
-                    resolver.openOutputStream(it)?.use { stream -> stream.write(bytes) }
-                    values.clear()
-                    values.put(MediaStore.Downloads.IS_PENDING, 0)
-                    resolver.update(it, values, null, nul
+         
