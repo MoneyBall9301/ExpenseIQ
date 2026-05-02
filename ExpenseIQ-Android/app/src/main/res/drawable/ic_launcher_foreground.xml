@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- ── PIGGY BANK ──
+         All content is within the 18–90 safe zone for adaptive icons.
+         The pig faces right, with coin slot on top and four short legs below. -->
+
+    <!-- Ear (behind head) -->
+    <path
+        android:fillColor="#f9a8d4"
+        android:pathData="M70,42 Q76,30 83,42 Q80,48 76,48 Q72,48 70,42 Z" />
+    <!-- Inner ear -->
+    <path
+        android:fillColor="#ec4899"
+        android:pathData="M72,42 Q76,34 80,42 Q78,46 76,46 Q74,46 72,42 Z" />
+
+    <!-- Body – large pink oval -->
+    <path
+        android:fillColor="#f9a8d4"
+        android:pathData="M20,64 a28,22 0 1,0 56,0 a28,22 0 1,0 -56,0" />
+
+    <!-- Head – circle that overlaps right side of body -->
+    <path
+        android:fillColor="#f9a8d4"
+        android:pathData="M54,54 a18,18 0 1,0 36,0 a18,18 0 1,0 -36,0" />
+
+    <!-- Snout – lighter oval -->
+    <path
+        android:fillColor="#fce7f3"
+        android:pathData="M77,58 a9,6 0 1,0 18,0 a9,6 0 1,0 -18,0" />
+    <!-- Nostril left -->
+    <path
+        android:fillColor="#9d174d"
+        android:pathData="M80,58 a2,1.5 0 1,0 4,0 a2,1.5 0 1,0 -4,0" />
+    <!-- Nostril right -->
+    <path
+        android:fillColor="#9d174d"
+        android:pathData="M88,58 a2,1.5 0 1,0 4,0 a2,1.5 0 1,0 -4,0" />
+
+    <!-- Eye -->
+    <path
+        android:fillColor="#1e293b"
+        android:pathData="M68,47 a3.5,3.5 0 1,0 7,0 a3.5,3.5 0 1,0 -7,0" />
+    <!-- Eye shine -->
+    <path
+        android:fillColor="#ffffff"
+        android:pathData="M69.5,45 a1.2,1.2 0 1,0 2.4,0 a1.2,1.2 0 1,0 -2.4,0" />
+
+    <!-- Coin slot on top of body -->
+    <path
+        android:fillColor="#9d174d"
+        android:pathData="M37,43 Q37,41 39,41 L53,41 Q55,41 55,43 L55,45.5 Q55,47.5 53,47.5 L39,47.5 Q37,47.5 37,45.5 Z" />
+
+    <!-- Legs -->
+    <path
+        android:fillColor="#f9a8d4"
+        android:pathData="M26,84 L30,84 Q32,84 32,86 L32,93 Q32,95 30,95 L26,95 Q24,95 24,93 L24,86 Q24,84 26,84 Z" />
+    <path
+        android:fillColor="#f9a8d4"
+        android:pathData="M37,84 L41,84 Q43,84 43,86 L43,93 Q43,95 41,95 L37,95 Q35,95 35,93 L35,86 Q35,84 37,84 Z" />
+    <path
+        android:fillColor="#f9a8d4"
+        android:pathData="M51,84 L55,84 Q57,84 57,86 L57,93 Q57,95 55,95 L51,95 Q49,95 49,93 L49,86 Q49,84 51,84 Z" />
+    <path
+        android:fillColor="#f9a8d4"
+        android:pathData="M62,84 L66,84 Q68,84 68,86 L68,93 Q68,95 66,95 L62,95 Q60,95 60,93 L60,86 Q60,84 62,84 Z" />
+
+    <!-- Curly tail (stroke only) -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#ec4899"
+        android:strokeWidth="3.5"
+        android:strokeLineCap="round"
+        android:pathData="M20,64 Q11,59 13,51 Q15,43 22,47" />
+
+</vector>

@@ -1,0 +1,14 @@
+# Android build outputs
+ExpenseIQ-Android/app/build/
+ExpenseIQ-Android/.gradle/
+ExpenseIQ-Android/local.properties
+ExpenseIQ-Android/.idea/workspace.xml
+ExpenseIQ-Android/.idea/caches/
+*.apk
+*.aab
+*.class
+*.dex
+
+# Misc
+.DS_Store
+Thumbs.db
