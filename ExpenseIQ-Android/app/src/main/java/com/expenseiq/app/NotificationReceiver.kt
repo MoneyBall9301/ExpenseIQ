@@ -56,12 +56,22 @@ class NotificationReceiver : BroadcastReceiver() {
             "$body\n$heatEmoji Spending Heat: $heatLabel ($heatScore/100)"
         else body
 
+        val heatColor = when {
+            heatScore <= 15 -> android.graphics.Color.parseColor("#22c55e")
+            heatScore <= 30 -> android.graphics.Color.parseColor("#4ade80")
+            heatScore <= 50 -> android.graphics.Color.parseColor("#facc15")
+            heatScore <= 70 -> android.graphics.Color.parseColor("#fb923c")
+            heatScore <= 85 -> android.graphics.Color.parseColor("#ef4444")
+            else            -> android.graphics.Color.parseColor("#dc2626")
+        }
         val notif = NotificationCompat.Builder(context, "expenseiq_alerts")
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle(title)
             .setContentText(body)
             .setStyle(NotificationCompat.BigTextStyle().bigText(fullBody))
             .setProgress(100, heatScore, false)
+            .setColor(heatColor)
+            .setColorized(true)
             .setContentIntent(pi)
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
@@ -70,17 +80,4 @@ class NotificationReceiver : BroadcastReceiver() {
         try {
             val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             nm.notify(1001, notif)
-        } catch (e: Exception) { /* silently ignore if permission revoked */ }
-
-        // Re-schedule for tomorrow
-        reschedule(context, prefs)
-    }
-
-    private fun reschedule(context: Context, prefs: android.content.SharedPreferences) {
-        val hour = prefs.getInt("notif_hour", 20)
-        val minute = prefs.getInt("notif_minute", 0)
-        val cal = java.util.Calendar.getInstance().apply {
-            add(java.util.Calendar.DAY_OF_YEAR, 1)
-            set(java.util.Calendar.HOUR_OF_DAY, hour)
-            set(java.util.Calendar.MINUTE, minute)
-            set(java.
+        } catch (e: Exce
