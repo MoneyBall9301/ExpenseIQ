@@ -984,7 +984,7 @@ mark { background:rgba(56,189,248,0.25); color:var(--accent); border-radius:3px;
 </div>
 
 <!-- SHEET OVERLAY -->
-<div class="sheet-overlay" id="sheet-overlay" onclick="overlayClose()"></div>
+<div class="sheet-overlay" id="sheet-overlay"></div>
 
 <!-- ═══ SHEET: ADD EXPENSE ═══ -->
 <div class="bottom-sheet" id="sheet-expense">
@@ -1540,56 +1540,59 @@ function goTab(id) {
 //  BOTTOM SHEETS
 // ════════════════════════════════════════════
 let activeSheet = null;
-// Track the viewport height when no keyboard is open
+// ── Sheet overlay: use touchend (not click) to avoid Android ghost-tap on keyboard open ──
 let _baseViewH = window.innerHeight;
+let _lastSheetTouchMs = 0;
+
 window.addEventListener('resize', () => {
-  // Only update base height when keyboard is NOT open (height increased or no sheet open)
   if (window.innerHeight > _baseViewH || !activeSheet) _baseViewH = window.innerHeight;
 });
 
-function overlayClose() {
-  // Android ghost-tap guard: if viewport has shrunk by >120px, keyboard is open — ignore tap
-  if (_baseViewH - window.innerHeight > 120) return;
-  // If a sheet input is focused, just dismiss keyboard — don't close sheet
+// Capture every touchstart on a sheet so we know the user is interacting with it
+document.addEventListener('touchstart', function(e) {
+  if (e.target && e.target.closest && e.target.closest('.bottom-sheet')) {
+    _lastSheetTouchMs = Date.now();
+  }
+}, true);
+
+function _shouldBlockOverlayClose() {
+  // Guard 1: touched the sheet recently (covers ghost-tap timing gap)
+  if (Date.now() - _lastSheetTouchMs < 1200) return true;
+  // Guard 2: keyboard is open (viewport shrank)
+  if (_baseViewH - window.innerHeight > 100) return true;
+  // Guard 3: a sheet input has focus
   const a = document.activeElement;
-  if (a && a.closest && a.closest('.bottom-sheet')) { a.blur(); return; }
-  closeSheet();
+  if (a && a.closest && a.closest('.bottom-sheet')) return true;
+  return false;
 }
+
 function openSheet(id) {
   closeSheet();
   activeSheet = id;
   const ov = document.getElementById('sheet-overlay');
   ov.classList.add('show');
-  // Block overlay briefly so the open-tap itself doesn't immediately close it
-  ov.style.pointerEvents = 'none';
-  setTimeout(() => { ov.style.pointerEvents = ''; }, 400);
-  const sheetEl = document.getElementById(id);
-  sheetEl.classList.add('show');
-  // Stop sheet touches from bubbling to overlay
-  if (!sheetEl._stopPropSet) {
-    sheetEl.addEventListener('touchstart', e => e.stopPropagation(), {passive:true});
-    sheetEl.addEventListener('click', e => e.stopPropagation());
-    sheetEl._stopPropSet = true;
-  }
+  document.getElementById(id).classList.add('show');
 }
 function closeSheet() {
   document.querySelectorAll('.bottom-sheet.show').forEach(s=>s.classList.remove('show'));
   const ov = document.getElementById('sheet-overlay');
   ov.classList.remove('show');
-  ov.style.pointerEvents = '';
   activeSheet = null;
 }
-// Every time a sheet input gains focus (keyboard opens), block the overlay for 800ms
-// This prevents the keyboard-open ghost tap from closing the sheet
-document.addEventListener('focusin', function(e) {
-  if (e.target && e.target.closest && e.target.closest('.bottom-sheet')) {
-    const ov = document.getElementById('sheet-overlay');
-    if (ov) {
-      ov.style.pointerEvents = 'none';
-      clearTimeout(window._ovTimer);
-      window._ovTimer = setTimeout(() => { if(ov) ov.style.pointerEvents = ''; }, 800);
-    }
-  }
+
+// Wire overlay close via touchend (synthetic click doesn't happen on touchend path)
+document.addEventListener('DOMContentLoaded', function() {
+  const ov = document.getElementById('sheet-overlay');
+  if (!ov) return;
+  ov.addEventListener('touchend', function(e) {
+    if (_shouldBlockOverlayClose()) return;
+    closeSheet();
+  });
+  // Fallback for non-touch (desktop testing)
+  ov.addEventListener('click', function(e) {
+    if (_shouldBlockOverlayClose()) return;
+    closeSheet();
+  });
 });
 
 // ════════════════════════════════════════════
