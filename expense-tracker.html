@@ -475,6 +475,7 @@ mark { background:rgba(56,189,248,0.25); color:var(--accent); border-radius:3px;
   <div class="kpi-grid" id="dash-kpi"></div>
   <div id="dash-backup-banner"></div>
   <div id="dash-health-score"></div>
+  <div id="dash-heat" style="margin-top:12px"></div>
   <div id="dash-flow" style="margin-top:12px"></div>
   <div id="dash-insights" style="margin-top:12px"></div>
   <div id="dash-weekly-brief"></div>
@@ -1769,6 +1770,7 @@ function renderDashboard() {
   // ── Backup nag banner ──
   safeRun(renderBackupBanner,'renderBackupBanner');
   safeRun(renderHealthScore,'renderHealthScore');
+  safeRun(renderHeatBar,'renderHeatBar');
   safeRun(renderWeeklyBrief, 'renderWeeklyBrief');
 
   try { renderCharts(mExp,month); } catch(e) {
@@ -3203,6 +3205,129 @@ function calcFinanceScore(month) {
   else if(score>=35){grade='Needs Work';color='#f97316';hex='#f97316';}
   else{grade='At Risk';color='var(--red)';hex='#ef4444';}
   return {score,grade,color,hex,components};
+}
+
+function calcHeatScore() {
+  const now = Date.now();
+  const DAY = 86400000;
+  const cutoff7 = now - 7 * DAY;
+  const cutoff3 = now - 3 * DAY;
+
+  // Avoidable spends in last 7 days
+  const avoid7 = D.expenses.filter(e => e.avoid === 'yes' && e.date && new Date(e.date).getTime() >= cutoff7);
+  // All spends in last 3 days
+  const all3   = D.expenses.filter(e => e.date && new Date(e.date).getTime() >= cutoff3 && !['Self / Bank Transfers','Investments / SIP'].includes(e.cat));
+
+  // Days since last avoidable spend
+  const avoidTs = D.expenses.filter(e => e.avoid === 'yes' && e.date).map(e => new Date(e.date).getTime()).sort((a,b)=>b-a);
+  const daysSince = avoidTs.length > 0 ? (now - avoidTs[0]) / DAY : 30;
+
+  // Consecutive days streak with avoidable spend
+  let streak = 0;
+  for (let d = 0; d < 7; d++) {
+    const dayStart = now - (d+1)*DAY, dayEnd = now - d*DAY;
+    if (D.expenses.some(e => e.avoid==='yes' && e.date && new Date(e.date).getTime()>=dayStart && new Date(e.date).getTime()<dayEnd)) streak++;
+    else break;
+  }
+
+  // Monthly income for proportion calc
+  const curM = new Date().toISOString().slice(0,7);
+  const mIncome = D.salary.filter(s=>s.date&&s.date.startsWith(curM)).reduce((s,e)=>s+e.amt,0) || 50000;
+
+  const avoidAmt7 = avoid7.reduce((s,e)=>s+e.amt,0);
+
+  let heat = 0;
+  heat += Math.min(avoid7.length * 12, 48);           // count: each avoidable = +12, max 48
+  heat += Math.min((avoidAmt7/mIncome)*200, 30);       // amount proportion: max 30
+  heat += Math.min(streak * 6, 18);                    // streak: each consecutive day = +6, max 18
+  heat += Math.min(Math.max(all3.length - 4, 0) * 2, 10); // frequency: >4 spends in 3 days
+
+  // Cooldown: -6 per day since last avoidable (max -40)
+  heat -= Math.min(daysSince * 6, 40);
+  heat = Math.max(0, Math.min(100, Math.round(heat)));
+
+  return { score: heat, avoid7, avoidAmt7, daysSince, streak, all3, mIncome };
+}
+
+function renderHeatBar() {
+  const el = document.getElementById('dash-heat');
+  if (!el) return;
+  const { score, avoid7, avoidAmt7, daysSince, streak } = calcHeatScore();
+
+  // Label & colours
+  const levels = [
+    { max:15,  label:'❄️ Ice Cold',   sub:'Perfect discipline. Keep it up!',       bar:'#22c55e', glow:'rgba(34,197,94,0.3)',  flame:'❄️' },
+    { max:30,  label:'🟢 Cool',        sub:'Spending well under control.',           bar:'#4ade80', glow:'rgba(74,222,128,0.25)', flame:'🌿' },
+    { max:50,  label:'🟡 Warming Up',  sub:'A few avoidable spends creeping in.',   bar:'#facc15', glow:'rgba(250,204,21,0.3)', flame:'🌡️' },
+    { max:70,  label:'🟠 Getting Hot', sub:'Too many unnecessary expenses.',        bar:'#fb923c', glow:'rgba(251,146,60,0.35)', flame:'🔥' },
+    { max:85,  label:'🔴 Burning!',    sub:'Impulse spending detected. Pull back.', bar:'#ef4444', glow:'rgba(239,68,68,0.4)',  flame:'🔥🔥' },
+    { max:101, label:'💥 Overheated!', sub:'Out of control. Stop all avoidable spends now.', bar:'#dc2626', glow:'rgba(220,38,38,0.5)', flame:'🔥🔥🔥' },
+  ];
+  const lv = levels.find(l => score < l.max) || levels[levels.length-1];
+  const pct = score;
+
+  // Cool-down tip
+  const coolDays = Math.max(0, Math.ceil((score / 6) - daysSince));
+  const tip = score <= 15
+    ? 'No avoidable spends — you're in the zone! 🎯'
+    : daysSince < 1
+      ? 'Avoid unnecessary spending today to start cooling down.'
+      : coolDays > 0
+        ? `~${coolDays} more day${coolDays>1?'s':''} of clean spending to go green.`
+        : 'Nearly cooled down — hold steady!';
+
+  // Pulse animation class
+  const pulse = score >= 70 ? 'animation:heatPulse 1.2s ease-in-out infinite;' : '';
+
+  el.innerHTML = `
+    <div class="card" style="padding:14px 16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <div style="font-weight:700;font-size:14px;color:${lv.bar};${pulse}">${lv.flame} ${lv.label}</div>
+        <div style="font-size:22px;font-weight:800;color:${lv.bar}">${score}</div>
+      </div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:8px">${lv.sub}</div>
+
+      <!-- Bar track -->
+      <div style="position:relative;height:12px;border-radius:99px;overflow:hidden;background:var(--surface2);margin-bottom:8px">
+        <!-- Gradient fill always shown underneath -->
+        <div style="position:absolute;inset:0;background:linear-gradient(90deg,#22c55e 0%,#facc15 40%,#fb923c 65%,#ef4444 85%,#dc2626 100%);border-radius:99px;opacity:0.18"></div>
+        <!-- Actual filled portion -->
+        <div style="position:absolute;left:0;top:0;height:100%;width:${pct}%;background:${lv.bar};border-radius:99px;transition:width 0.6s cubic-bezier(.4,0,.2,1);box-shadow:0 0 8px ${lv.glow}"></div>
+        <!-- Marker dot -->
+        <div style="position:absolute;top:50%;left:calc(${pct}% - 6px);transform:translateY(-50%);width:12px;height:12px;border-radius:50%;background:${lv.bar};border:2px solid var(--surface1);box-shadow:0 0 6px ${lv.glow};transition:left 0.6s cubic-bezier(.4,0,.2,1)"></div>
+      </div>
+
+      <!-- Scale labels -->
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:10px">
+        <span>❄️ 0</span><span>🟡 50</span><span>🔥 100</span>
+      </div>
+
+      <!-- Stats row -->
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${avoid7.length>0?`<span style="font-size:11px;padding:3px 8px;border-radius:99px;background:rgba(239,68,68,0.12);color:#ef4444">⚠️ ${avoid7.length} avoidable this week${avoidAmt7>0?' · '+INR(avoidAmt7):''}</span>`:'<span style="font-size:11px;padding:3px 8px;border-radius:99px;background:rgba(34,197,94,0.12);color:#22c55e">✅ No avoidable spends this week</span>'}
+        ${daysSince<30?`<span style="font-size:11px;padding:3px 8px;border-radius:99px;background:var(--surface2);color:var(--muted)">Last: ${daysSince<1?'today':daysSince<2?'yesterday':Math.floor(daysSince)+'d ago'}</span>`:''}
+      </div>
+
+      <!-- Tip -->
+      <div style="margin-top:8px;font-size:12px;color:var(--muted);border-top:1px solid var(--surface2);padding-top:8px">💡 ${tip}</div>
+    </div>
+  `;
+
+  // Push heat to notification data
+  if (typeof Android !== 'undefined') {
+    Android.updateNotificationData(
+      score >= 50 ? Math.ceil(score/20) : 0,
+      score >= 70 ? lv.label+': '+lv.sub : score >= 50 ? 'Spending warming up — '+avoid7.length+' avoidable spends this week.' : 'All clear — spending under control!'
+    );
+  }
+}
+
+// Inject heat pulse keyframe once
+if (!document.getElementById('heat-style')) {
+  const s = document.createElement('style');
+  s.id = 'heat-style';
+  s.textContent = '@keyframes heatPulse{0%,100%{opacity:1}50%{opacity:0.6}}';
+  document.head.appendChild(s);
 }
 
 function renderHealthScore() {
