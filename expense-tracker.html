@@ -677,31 +677,33 @@ mark { background:rgba(56,189,248,0.25); color:var(--accent); border-radius:3px;
     <div class="btn-row">
       <button class="btn btn-ghost" onclick="exportCSV()">📊 Download CSV</button>
       <button class="btn btn-ghost" onclick="exportJSON()">📦 Backup JSON</button>
-      <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">
-        <div class="card-title" style="margin-bottom:10px">🔄 App Updates</div>
-        <div class="form-row">
-          <label>Update URL</label>
-          <input type="url" id="set-updateurl" placeholder="https://raw.githubusercontent.com/MoneyBall9301/ExpenseIQ/main/expense-tracker.html" inputmode="url">
-          <div style="font-size:11px;color:var(--muted);margin-top:4px">Point to a raw HTML file (GitHub, Gist, etc.). Fetched and stored on-device — no reinstall needed.</div>
-        </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
-          <button class="btn btn-primary btn-sm" onclick="fetchAndApplyUpdate()">⬇️ Download Update</button>
-          <button class="btn btn-ghost btn-sm" onclick="revertToBuiltin()">↩️ Revert to Built-in</button>
-        </div>
-        <div id="update-status" style="margin-top:8px;font-size:12px;color:var(--muted)"></div>
-      </div>
-      <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">
-        <div class="card-title" style="margin-bottom:10px">🔧 JS Patch <span style="font-size:11px;font-weight:400;color:var(--muted)">(advanced)</span></div>
-        <div class="form-row">
-          <textarea id="set-patch" placeholder="Paste JS patch code here… e.g: renderDashboard = function() { … }" style="min-height:70px;font-family:monospace;font-size:12px"></textarea>
-        </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn btn-primary btn-sm" onclick="applyJSPatch()">▶️ Apply Patch</button>
-          <button class="btn btn-ghost btn-sm" onclick="clearJSPatch()">🗑️ Clear Patch</button>
-        </div>
-        <div style="font-size:11px;color:var(--muted);margin-top:6px">Patches run on every load. Use to fix bugs or add features without updating the app.</div>
-      </div>
     </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🔄 App Updates</div>
+    <div class="form-row">
+      <label>Update URL</label>
+      <input type="url" id="set-updateurl" placeholder="https://raw.githubusercontent.com/MoneyBall9301/ExpenseIQ/main/expense-tracker.html" inputmode="url">
+      <div style="font-size:11px;color:var(--muted);margin-top:4px">Fetched from GitHub and stored on-device — no reinstall needed.</div>
+    </div>
+    <div class="btn-row" style="margin-top:10px">
+      <button class="btn btn-primary" onclick="fetchAndApplyUpdate()">⬇️ Download Update</button>
+      <button class="btn btn-ghost" onclick="revertToBuiltin()">↩️ Revert to Built-in</button>
+    </div>
+    <div id="update-status" style="margin-top:8px;font-size:12px;color:var(--muted)"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🔧 JS Patch <span style="font-size:11px;font-weight:400;color:var(--muted)">(advanced)</span></div>
+    <div class="form-row">
+      <textarea id="set-patch" placeholder="Paste JS patch code here…" style="min-height:70px;font-family:monospace;font-size:12px"></textarea>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="applyJSPatch()">▶️ Apply Patch</button>
+      <button class="btn btn-ghost" onclick="clearJSPatch()">🗑️ Clear Patch</button>
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-top:6px">Patches run on every load. Use to fix bugs or add features without a full update.</div>
   </div>
 
   <div class="card">
