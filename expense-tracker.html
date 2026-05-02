@@ -1833,10 +1833,17 @@ function renderDashboard() {
       <div class="k-label">⚠️ Avoidable</div><div class="k-val">${INR(avoidable)}</div>
       <div class="k-sub">${netSpent>0?(avoidable/netSpent*100).toFixed(0)+'% of spending':avoidable===0?'none this month':''}</div>
     </div>
-    <div class="kpi" style="--kpi-color:var(--green)">
-      <div class="k-label">✅ Unavoidable</div><div class="k-val">${INR(unavoidable)}</div>
-      <div class="k-sub">${netSpent>0?(unavoidable/netSpent*100).toFixed(0)+'% of spending':unavoidable===0?'mark expenses as needed':''}</div>
-    </div>
+    ${(()=>{
+      const projs=D.projects||[];
+      const totalReq=projs.reduce((s,p)=>s+p.items.reduce((ss,i)=>ss+i.required,0),0);
+      const totalAlloc=projs.reduce((s,p)=>s+p.items.reduce((ss,i)=>ss+i.allocated,0),0);
+      const pct=totalReq>0?Math.min(totalAlloc/totalReq*100,100):0;
+      return `<div class="kpi" style="--kpi-color:#fbbf24">
+        <div class="k-label">🎯 Projects</div>
+        <div class="k-val">${projs.length}</div>
+        <div class="k-sub">${totalReq>0?INR(totalAlloc)+' / '+INR(totalReq)+' ('+pct.toFixed(0)+'%)':'no goals set'}</div>
+      </div>`;
+    })()}
     <div class="kpi" style="grid-column:1/-1;--kpi-color:var(--orange);padding:0;overflow:hidden">
       <div style="padding:8px 14px 6px;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid var(--surface2)">💼 Commitments</div>
       <div style="display:grid;grid-template-columns:1fr 1fr">
@@ -4260,9 +4267,4 @@ function runSearch(raw) {
     });
   });
 
-  D.splits.forEach(s => {
-    const hay = `${s.person||''} ${s.title||''} ${s.desc||''} ${s.notes||''}`.toLowerCase();
-    if (hay.includes(q)) results.push({
-      type:'spl', icon:'🤝',
-      title: `${s.person||s.title} — ${s.desc||''}`,
-      sub: `${fmtDate(s.date)} · ${s.settled?'✅ Settled':'⏳ Pend
+  D.splits.forEach(
