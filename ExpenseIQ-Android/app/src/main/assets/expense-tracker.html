@@ -1797,7 +1797,9 @@ function renderDashboard() {
   const sipCommits=D.commitments.filter(c=>c.active&&c.isInvestment).reduce((s,c)=>s+c.amt,0);
   const invested=investedExp+sipCommits;
   const income=mSal.reduce((s,e)=>s+e.amt,0);
-  const avoidable=mExp.filter(e=>e.avoid==='yes').reduce((s,e)=>s+e.amt,0);
+  const spentTxns=mExp.filter(e=>!EXCL_SPENT.includes(e.cat)&&e.txtype!=='credit_card'&&!e._commitId).length;
+  const avoidable=mExp.filter(e=>e.avoid==='yes'&&!EXCL_SPENT.includes(e.cat)&&e.txtype!=='credit_card'&&!e._commitId).reduce((s,e)=>s+e.amt,0);
+  const unavoidable=mExp.filter(e=>e.avoid==='no'&&!EXCL_SPENT.includes(e.cat)&&e.txtype!=='credit_card'&&!e._commitId).reduce((s,e)=>s+e.amt,0);
   // Splits received back this month — subtract from gross spent to get net spent
   const receivedBack=D.splits.filter(s=>s.received&&s.receivedDate&&s.receivedDate.startsWith(month)).reduce((s,x)=>s+x.amt,0);
   const netSpent=Math.max(spent-receivedBack,0);
@@ -1816,7 +1818,7 @@ function renderDashboard() {
     </div>
     <div class="kpi" style="--kpi-color:var(--red)">
       <div class="k-label">💸 Spent</div><div class="k-val">${INR(netSpent)}</div>
-      <div class="k-sub">${receivedBack>0?INR(spent)+' - '+INR(receivedBack)+' splits = net · ':''}${mExp.length} txns</div>
+      <div class="k-sub">${receivedBack>0?INR(spent)+' - '+INR(receivedBack)+' splits = net · ':''}${spentTxns} txns</div>
     </div>
     ${(ccAmt>0||ccPurchases>0)?`<div class="kpi" style="--kpi-color:var(--blue)">
       <div class="k-label">💳 Credit Card</div>
@@ -1829,7 +1831,11 @@ function renderDashboard() {
     </div>
     <div class="kpi" style="--kpi-color:var(--yellow)">
       <div class="k-label">⚠️ Avoidable</div><div class="k-val">${INR(avoidable)}</div>
-      <div class="k-sub">${netSpent>0?(avoidable/netSpent*100).toFixed(0)+'% of spending':''}</div>
+      <div class="k-sub">${netSpent>0?(avoidable/netSpent*100).toFixed(0)+'% of spending':avoidable===0?'none this month':''}</div>
+    </div>
+    <div class="kpi" style="--kpi-color:var(--green)">
+      <div class="k-label">✅ Unavoidable</div><div class="k-val">${INR(unavoidable)}</div>
+      <div class="k-sub">${netSpent>0?(unavoidable/netSpent*100).toFixed(0)+'% of spending':unavoidable===0?'mark expenses as needed':''}</div>
     </div>
     <div class="kpi" style="grid-column:1/-1;--kpi-color:var(--orange);padding:0;overflow:hidden">
       <div style="padding:8px 14px 6px;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid var(--surface2)">💼 Commitments</div>
@@ -1837,7 +1843,7 @@ function renderDashboard() {
         <div style="padding:10px 14px;border-right:1px solid var(--surface2)">
           <div style="font-size:11px;font-weight:700;color:var(--purple);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px">📈 Investments</div>
           <div style="font-size:20px;font-weight:800;color:var(--purple)">${INR(invested)}</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:3px">${sipCommits>0?INR(sipCommits)+' SIP':investedExp>0?'from expenses':'none set'}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:3px">${income>0?(invested/income*100).toFixed(0)+'% of income':sipCommits>0?D.commitments.filter(c=>c.active&&c.isInvestment).length+' SIP(s)':'none set'}</div>
         </div>
         <div style="padding:10px 14px">
           <div style="font-size:11px;font-weight:700;color:var(--orange);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px">🏠 Personal</div>
@@ -4259,24 +4265,4 @@ function runSearch(raw) {
     if (hay.includes(q)) results.push({
       type:'spl', icon:'🤝',
       title: `${s.person||s.title} — ${s.desc||''}`,
-      sub: `${fmtDate(s.date)} · ${s.settled?'✅ Settled':'⏳ Pending'}`,
-      amt: INR(s.myShare||s.amt), amtClass: s.settled?'txt-green':'txt-purple',
-      secLabel:'Split', secClass:'rs-spl',
-      action: ()=>{ closeSearch(); goTab('splits'); }
-    });
-  });
-
-  D.commitments.forEach(c => {
-    const hay = `${c.name} ${c.desc||''}`.toLowerCase();
-    if (hay.includes(q)) results.push({
-      type:'com', icon:'📋',
-      title: c.name, sub: `Due ${ordinal(c.due||1)} every month · ${c.active?'Active':'Inactive'}`,
-      amt: INR(c.amt), amtClass:'txt-orange',
-      secLabel:'Commitment', secClass:'rs-com',
-      action: ()=>{ closeSearch(); goTab('commitments'); }
-    });
-  });
-
-  D.needWant.forEach(n => {
-    const hay = `${n.item} ${n.why||''}`.toLowerCase();
-    if (hay.incl
+      sub: `${fmtDate(s.date)} · ${s.settled?'✅ Settled':'⏳ Pend
