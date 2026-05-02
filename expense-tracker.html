@@ -778,43 +778,78 @@ mark { background:rgba(56,189,248,0.25); color:var(--accent); border-radius:3px;
       <div class="more-icon">🎯</div>
       <div class="more-label" style="color:var(--accent)">Budget Plan</div>
     </div>
-    <div class="more-item" onclick="goTab('triathlon')" style="border-color:rgba(34,211,238,0.4);background:rgba(34,211,238,0.05)">
-      <div class="more-icon">🏊</div>
-      <div class="more-label" style="color:#22d3ee">Triathlon</div>
+    <div class="more-item" onclick="goTab('projects')" style="border-color:rgba(251,191,36,0.4);background:rgba(251,191,36,0.05)">
+      <div class="more-icon">🎯</div>
+      <div class="more-label" style="color:#fbbf24">Projects</div>
     </div>
   </div>
 </div>
 
-<!-- TRIATHLON -->
-<div class="tab" id="tab-triathlon">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-    <select id="tri-period" onchange="renderTriathlon()" style="font-size:14px;padding:8px 12px">
-      <option value="month">This Month</option>
-      <option value="year">This Year</option>
-      <option value="all">All Time</option>
-    </select>
-    <input type="month" id="tri-month" onchange="renderTriathlon()" style="font-size:14px;padding:8px 12px;width:auto">
+<!-- PROJECTS -->
+<div class="tab" id="tab-projects">
+  <div id="proj-list"></div>
+</div>
+
+<!-- PROJECT bottom sheet -->
+<div class="bottom-sheet" id="sheet-project">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title" id="proj-sheet-title">New Project</div>
+  <input type="hidden" id="proj-edit-id">
+  <div class="form-row">
+    <label>Project Name</label>
+    <input type="text" id="proj-name" placeholder="e.g. Marriage, Car, Masters…">
   </div>
-
-  <!-- KPIs -->
-  <div class="kpi-grid" id="tri-kpi" style="margin-bottom:12px"></div>
-
-  <!-- Discipline breakdown -->
-  <div class="card" style="margin-bottom:12px">
-    <div class="card-title">🏅 Spend by Discipline</div>
-    <div id="tri-disciplines"></div>
+  <div class="form-row" style="display:flex;gap:10px">
+    <div style="flex:1">
+      <label>Emoji</label>
+      <input type="text" id="proj-emoji" placeholder="🎯" maxlength="2" style="text-align:center;font-size:20px">
+    </div>
+    <div style="flex:1">
+      <label>Color</label>
+      <input type="color" id="proj-color" value="#6366f1" style="width:100%;height:42px;border-radius:8px;border:1px solid var(--border);background:var(--surface2)">
+    </div>
+    <div style="flex:2">
+      <label>Target Date</label>
+      <input type="month" id="proj-deadline">
+    </div>
   </div>
-
-  <!-- Chart -->
-  <div class="card" style="margin-bottom:12px">
-    <div class="card-title">📊 Category Breakdown</div>
-    <div class="chart-wrap"><canvas id="chartTri"></canvas></div>
+  <div class="form-row">
+    <label>Notes (optional)</label>
+    <input type="text" id="proj-notes" placeholder="Any notes about this project…">
   </div>
+  <div class="btn-row">
+    <button class="btn btn-ghost" onclick="closeSheet()">Cancel</button>
+    <button class="btn btn-primary" onclick="saveProject()">Save Project</button>
+  </div>
+</div>
 
-  <!-- Expense list -->
-  <div class="card">
-    <div class="card-title">📋 Triathlon Expenses</div>
-    <div id="tri-list"></div>
+<!-- PROJECT ITEM bottom sheet -->
+<div class="bottom-sheet" id="sheet-proj-item">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title" id="proj-item-sheet-title">Add Expense</div>
+  <input type="hidden" id="proj-item-proj-id">
+  <input type="hidden" id="proj-item-edit-id">
+  <div class="form-row">
+    <label>Expense Name</label>
+    <input type="text" id="proj-item-name" placeholder="e.g. Venue, Tuition, Down Payment…">
+  </div>
+  <div class="form-row" style="display:flex;gap:10px">
+    <div style="flex:1">
+      <label>Required (₹)</label>
+      <input type="number" id="proj-item-required" placeholder="0">
+    </div>
+    <div style="flex:1">
+      <label>Allocated (₹)</label>
+      <input type="number" id="proj-item-allocated" placeholder="0">
+    </div>
+  </div>
+  <div class="form-row">
+    <label>Notes (optional)</label>
+    <input type="text" id="proj-item-notes" placeholder="Any notes…">
+  </div>
+  <div class="btn-row">
+    <button class="btn btn-ghost" onclick="closeSheet()">Cancel</button>
+    <button class="btn btn-primary" onclick="saveProjectItem()">Save</button>
   </div>
 </div>
 
@@ -1332,7 +1367,7 @@ const BUDGET_BUCKETS = [
 
 let D = {
   expenses:[], reminders:[], commitments:[], needWant:[],
-  salary:[], splits:[], untracked:[],
+  salary:[], splits:[], untracked:[], projects:[],
   settings:{ geminiKey:'', model:'gemini-2.0-flash', name:'Pranav', spendLimit:0, warnAt:80 },
   budget:{ useActualSalary:true, customIncome:0,
     targets:{ savings:10, invest:15, commits:35, cc:15, food:10, shopping:5, fun:3, transport:3, health:3, bills:5, other:1, tri:3 }
@@ -1344,7 +1379,7 @@ const TAB_TITLES = {
   dashboard:'🐷 ExpenseIQ', expenses:'📋 Expenses', reminders:'🔔 Reminders',
   commitments:'💼 Commitments', needwant:'📋 Need / Want', salary:'💰 Salary',
   splits:'🤝 Splits & IOUs', ai:'🤖 AI Assistant', untracked:'🗂️ Untracked',
-  settings:'⚙️ Settings', more:'☰ More', budget:'🎯 Budget Planner', triathlon:'🏊 Triathlon'
+  settings:'⚙️ Settings', more:'☰ More', budget:'🎯 Budget Planner', projects:'🎯 Projects'
 };
 
 
@@ -1410,7 +1445,7 @@ function goTab(id) {
   const fabMap = {
     dashboard:null, expenses:'sheet-expense', reminders:'sheet-reminder',
     commitments:'sheet-commitment', needwant:'sheet-needwant', salary:'sheet-salary',
-    splits:'sheet-split', untracked:'sheet-untracked', ai:null, settings:null, more:null, budget:null, triathlon:null
+    splits:'sheet-split', untracked:'sheet-untracked', ai:null, settings:null, more:null, budget:null, projects:'sheet-project'
   };
   const fab = document.getElementById('fab-btn');
   const target = fabMap[id];
@@ -1421,7 +1456,7 @@ function goTab(id) {
     dashboard:renderDashboard, expenses:renderExpList, reminders:renderReminders,
     commitments:renderCommitments, needwant:renderNW, salary:renderSalary,
     splits:renderSplits, untracked:renderUntracked, ai:checkAIKey, settings:loadSettings,
-    budget:renderBudget, triathlon:renderTriathlon
+    budget:renderBudget, projects:renderProjects
   };
   if(renders[id]) safeRun(renders[id], id);
   try { document.getElementById('main-content').scrollTop=0; } catch(e){}
@@ -2357,6 +2392,174 @@ const TRI_DISCIPLINES = [
   { name:'🏁 Races',     color:'#f97316', cats:['Race Entry Fees'] },
   { name:'🧑‍🏫 Coaching', color:'#f472b6', cats:['Coaching / Training','Fitness & Wellness'] },
 ];
+
+function renderProjects() {
+  if(!D.projects) D.projects=[];
+  const el=document.getElementById('proj-list'); if(!el) return;
+
+  const totalRequired=D.projects.reduce((s,p)=>s+p.items.reduce((a,i)=>a+i.required,0),0);
+  const totalAllocated=D.projects.reduce((s,p)=>s+p.items.reduce((a,i)=>a+i.allocated,0),0);
+  const overallPct=totalRequired>0?Math.min(totalAllocated/totalRequired*100,100):0;
+
+  const summaryHtml = D.projects.length>0 ? `
+    <div class="kpi-grid" style="margin-bottom:12px">
+      <div class="kpi" style="--kpi-color:var(--blue)">
+        <div class="k-label">📁 Projects</div><div class="k-val">${D.projects.length}</div>
+      </div>
+      <div class="kpi" style="--kpi-color:var(--purple)">
+        <div class="k-label">🎯 Total Goal</div><div class="k-val">${INR(totalRequired)}</div>
+      </div>
+      <div class="kpi" style="--kpi-color:var(--green)">
+        <div class="k-label">✅ Allocated</div><div class="k-val">${INR(totalAllocated)}</div>
+        <div class="k-sub">${overallPct.toFixed(0)}% funded</div>
+      </div>
+    </div>` : '';
+
+  if(D.projects.length===0){
+    el.innerHTML=summaryHtml+`<div style="text-align:center;padding:50px 20px;color:var(--muted)">
+      <div style="font-size:52px;margin-bottom:12px">🎯</div>
+      <div style="font-size:16px;font-weight:600;color:var(--text);margin-bottom:8px">No projects yet</div>
+      <div style="font-size:13px">Tap + to create your first goal<br>Marriage · Education · Car · Emergency Fund…</div>
+    </div>`;
+    return;
+  }
+
+  el.innerHTML = summaryHtml + D.projects.map(p=>{
+    const req=p.items.reduce((s,i)=>s+i.required,0);
+    const alloc=p.items.reduce((s,i)=>s+i.allocated,0);
+    const pct=req>0?Math.min(alloc/req*100,100):0;
+    const done=alloc>=req&&req>0;
+    const col=p.color||'#6366f1';
+    const isOpen=localStorage.getItem('proj_open_'+p.id)==='1';
+    const itemsHtml=isOpen?`
+      <div style="border-top:1px solid var(--surface2);padding-top:10px;margin-top:8px">
+        ${p.items.length===0?`<div style="text-align:center;color:var(--muted);font-size:13px;padding:10px">No expenses added yet.</div>`:''}
+        ${p.items.map(item=>{
+          const ip=item.required>0?Math.min(item.allocated/item.required*100,100):0;
+          const id2=item.allocated>=item.required&&item.required>0;
+          return `<div style="padding:8px 0;border-bottom:1px solid var(--surface2)">
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="flex:1">
+                <div style="font-size:13px;font-weight:500;color:var(--text)">${item.name}</div>
+                <div style="font-size:11px;color:var(--muted)">${INR(item.allocated)} allocated of ${INR(item.required)} required</div>
+                ${item.notes?`<div style="font-size:11px;color:var(--muted)">${item.notes}</div>`:''}
+              </div>
+              <div style="font-size:12px;font-weight:700;color:${id2?'var(--green)':col}">${ip.toFixed(0)}%</div>
+              <button class="btn btn-ghost btn-sm" style="padding:3px 8px;font-size:11px" onclick="openProjItemSheet('${p.id}','${item.id}')">Edit</button>
+              <button class="btn btn-ghost btn-sm" style="padding:3px 8px;font-size:11px;color:var(--red)" onclick="deleteProjItem('${p.id}','${item.id}')">✕</button>
+            </div>
+            <div style="margin-top:5px;background:var(--surface2);border-radius:99px;height:3px;overflow:hidden">
+              <div style="height:100%;width:${ip.toFixed(1)}%;background:${id2?'var(--green)':col};border-radius:99px"></div>
+            </div>
+          </div>`;
+        }).join('')}
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button class="btn btn-primary btn-sm" style="flex:1" onclick="openProjItemSheet('${p.id}',null)">+ Add Expense</button>
+          <button class="btn btn-ghost btn-sm" onclick="openProjectSheet('${p.id}')">✏️ Edit</button>
+          <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="deleteProject('${p.id}')">🗑️ Delete</button>
+        </div>
+      </div>` : '';
+    const daysLeft=p.deadline?Math.ceil((new Date(p.deadline+'-01')-new Date())/(86400000)):-1;
+    return `<div class="card" style="border-left:4px solid ${col};margin-bottom:10px">
+      <div style="display:flex;align-items:center;gap:10px;cursor:pointer" onclick="toggleProject('${p.id}')">
+        <span style="font-size:26px">${p.emoji||'🎯'}</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;font-size:15px;color:var(--text)">${p.name}</div>
+          ${p.deadline?`<div style="font-size:11px;color:var(--muted)">📅 ${p.deadline}${daysLeft>0?' · '+daysLeft+'d left':daysLeft===0?' · Due now!':' · Passed'}</div>`:''}
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-size:14px;font-weight:700;color:${done?'var(--green)':col}">${INR(alloc)}</div>
+          <div style="font-size:11px;color:var(--muted)">/ ${INR(req)}</div>
+        </div>
+        <span style="color:var(--muted)">${isOpen?'▲':'▼'}</span>
+      </div>
+      <div style="margin:8px 0 2px;background:var(--surface2);border-radius:99px;height:7px;overflow:hidden">
+        <div style="height:100%;width:${pct.toFixed(1)}%;background:${done?'var(--green)':col};border-radius:99px;transition:width 0.5s"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted)">
+        <span>${p.items.length} item${p.items.length!==1?'s':''}</span>
+        <span>${pct.toFixed(0)}% funded${done?' ✅':''}</span>
+      </div>
+      ${itemsHtml}
+    </div>`;
+  }).join('');
+}
+
+function toggleProject(id){
+  const key='proj_open_'+id;
+  localStorage.setItem(key, localStorage.getItem(key)==='1'?'0':'1');
+  safeRun(renderProjects,'renderProjects');
+}
+
+function openProjectSheet(id){
+  const p=id?D.projects.find(x=>x.id===id):null;
+  document.getElementById('proj-sheet-title').textContent=p?'Edit Project':'New Project';
+  document.getElementById('proj-edit-id').value=p?p.id:'';
+  document.getElementById('proj-name').value=p?p.name:'';
+  document.getElementById('proj-emoji').value=p?p.emoji:'🎯';
+  document.getElementById('proj-color').value=p?p.color:'#6366f1';
+  document.getElementById('proj-deadline').value=p?p.deadline:'';
+  document.getElementById('proj-notes').value=p?p.notes:'';
+  openSheet('sheet-project');
+}
+
+function saveProject(){
+  const id=document.getElementById('proj-edit-id').value;
+  const name=document.getElementById('proj-name').value.trim();
+  if(!name){toast('Enter a project name','err');return;}
+  if(!D.projects) D.projects=[];
+  if(id){
+    const p=D.projects.find(x=>x.id===id);
+    if(p){p.name=name;p.emoji=document.getElementById('proj-emoji').value||'🎯';p.color=document.getElementById('proj-color').value;p.deadline=document.getElementById('proj-deadline').value;p.notes=document.getElementById('proj-notes').value;}
+  } else {
+    D.projects.unshift({id:uid(),name,emoji:document.getElementById('proj-emoji').value||'🎯',color:document.getElementById('proj-color').value,deadline:document.getElementById('proj-deadline').value,notes:document.getElementById('proj-notes').value,items:[]});
+  }
+  save(); closeSheet(); safeRun(renderProjects,'renderProjects'); toast('✅ Project saved!');
+}
+
+function deleteProject(id){
+  if(!confirm('Delete this project and all its expenses?')) return;
+  D.projects=D.projects.filter(p=>p.id!==id);
+  save(); safeRun(renderProjects,'renderProjects'); toast('🗑️ Project deleted');
+}
+
+function openProjItemSheet(projId, itemId){
+  const p=D.projects.find(x=>x.id===projId); if(!p) return;
+  const item=itemId?p.items.find(i=>i.id===itemId):null;
+  document.getElementById('proj-item-sheet-title').textContent=item?'Edit Expense':'Add Expense';
+  document.getElementById('proj-item-proj-id').value=projId;
+  document.getElementById('proj-item-edit-id').value=item?item.id:'';
+  document.getElementById('proj-item-name').value=item?item.name:'';
+  document.getElementById('proj-item-required').value=item?item.required:'';
+  document.getElementById('proj-item-allocated').value=item?item.allocated:'';
+  document.getElementById('proj-item-notes').value=item?item.notes:'';
+  openSheet('sheet-proj-item');
+}
+
+function saveProjectItem(){
+  const projId=document.getElementById('proj-item-proj-id').value;
+  const itemId=document.getElementById('proj-item-edit-id').value;
+  const name=document.getElementById('proj-item-name').value.trim();
+  if(!name){toast('Enter an expense name','err');return;}
+  const required=+(document.getElementById('proj-item-required').value||0);
+  const allocated=+(document.getElementById('proj-item-allocated').value||0);
+  const notes=document.getElementById('proj-item-notes').value.trim();
+  const p=D.projects.find(x=>x.id===projId); if(!p) return;
+  if(itemId){
+    const item=p.items.find(i=>i.id===itemId);
+    if(item){item.name=name;item.required=required;item.allocated=allocated;item.notes=notes;}
+  } else {
+    p.items.push({id:uid(),name,required,allocated,notes});
+    localStorage.setItem('proj_open_'+projId,'1'); // auto-expand
+  }
+  save(); closeSheet(); safeRun(renderProjects,'renderProjects'); toast('✅ Saved!');
+}
+
+function deleteProjItem(projId,itemId){
+  const p=D.projects.find(x=>x.id===projId); if(!p) return;
+  p.items=p.items.filter(i=>i.id!==itemId);
+  save(); safeRun(renderProjects,'renderProjects'); toast('🗑️ Removed');
+}
 
 function renderTriathlon() {
   const now = new Date();
