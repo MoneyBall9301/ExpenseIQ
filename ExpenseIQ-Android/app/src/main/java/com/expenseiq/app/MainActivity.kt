@@ -107,9 +107,19 @@ class MainActivity : AppCompatActivity() {
         }
 
         // ── Load app: prefer downloaded update over bundled assets ─
+        // NOTE: file:///data/user/... paths are blocked by Android (ERR_ACCESS_DENIED).
+        // Instead, read the update file content and inject it via loadDataWithBaseURL,
+        // using the assets base URL so localStorage keys stay consistent across versions.
         val updateFile = File(filesDir, UPDATE_FILENAME)
         if (updateFile.exists()) {
-            webView.loadUrl("file://${updateFile.absolutePath}")
+            val html = updateFile.readText(Charsets.UTF_8)
+            webView.loadDataWithBaseURL(
+                "file:///android_asset/",   // base URL — keeps localStorage origin stable
+                html,
+                "text/html",
+                "UTF-8",
+                null
+            )
         } else {
             webView.loadUrl("file:///android_asset/expense-tracker.html")
         }
@@ -182,19 +192,4 @@ class MainActivity : AppCompatActivity() {
             return if (file.exists()) java.util.Date(file.lastModified()).toString() else ""
         }
 
-        /** Delete the stored update — reverts to bundled version on next launch */
-        @JavascriptInterface
-        fun clearUpdate() {
-            val file = File(ctx.filesDir, UPDATE_FILENAME)
-            val deleted = file.delete()
-            runOnUiThread {
-                Toast.makeText(
-                    ctx,
-                    if (deleted) "✅ Update cleared. Bundled version loads on next restart."
-                    else "ℹ️ No update file to clear.",
-                    Toast.LENGTH_LONG
-                ).show()
-            }
-        }
-    }
-}
+        /** Delete the stored update — reverts to bundled version o
