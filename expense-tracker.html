@@ -94,7 +94,7 @@ body {
   position:fixed; bottom:calc(var(--nav-h) + 16px); right:16px;
   width:56px; height:56px; border-radius:50%;
   background:var(--accent); color:#0f172a;
-  border:none; font-size:26px; font-weight:300;
+  border:none; font-size:28px; font-weight:700;
   display:flex; align-items:center; justify-content:center;
   box-shadow:0 4px 20px rgba(56,189,248,0.4);
   cursor:pointer; z-index:99; transition:transform 0.15s, opacity 0.15s;
@@ -800,25 +800,41 @@ mark { background:rgba(56,189,248,0.25); color:var(--accent); border-radius:3px;
 
 
 
-<!-- PROJECT ITEM bottom sheet -->
+<!-- PROJECT FUND bottom sheet -->
 <div class="bottom-sheet" id="sheet-proj-fund">
   <div class="sheet-handle"></div>
   <div class="sheet-header">
-    <span class="sheet-title" id="proj-fund-title">Update Allocation</span>
+    <span class="sheet-title" id="proj-fund-title">💰 Fund Item</span>
     <button class="sheet-close" onclick="closeSheet(true)">✕</button>
   </div>
   <input type="hidden" id="proj-fund-proj-id">
   <input type="hidden" id="proj-fund-item-id">
   <div class="sheet-body">
-    <div style="font-size:13px;color:var(--muted);margin-bottom:12px" id="proj-fund-subtitle"></div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:14px" id="proj-fund-subtitle"></div>
     <div class="form-row">
-      <label>Allocated So Far (₹)</label>
-      <input type="number" id="proj-fund-allocated" placeholder="0" inputmode="numeric">
-      <div style="font-size:11px;color:var(--muted);margin-top:4px">Enter total amount allocated so far (not just the new addition).</div>
+      <label>Amount Adding Now (₹)</label>
+      <input type="number" id="proj-fund-amount" placeholder="0" inputmode="numeric">
     </div>
+    <div class="form-row">
+      <label>Source</label>
+      <select id="proj-fund-source">
+        <option value="savings">💵 Savings / Cash</option>
+        <option value="bank_transfer">🏦 Bank Transfer</option>
+        <option value="rd_withdrawal">📦 RD Withdrawal</option>
+        <option value="sip_redemption">📈 SIP Redemption</option>
+        <option value="fd_break">🏛️ FD Break</option>
+        <option value="salary">💼 From Salary</option>
+        <option value="other">💡 Other</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label>Note (optional)</label>
+      <input type="text" id="proj-fund-note" placeholder="e.g. June salary savings">
+    </div>
+    <div id="proj-fund-history"></div>
     <div class="btn-row">
       <button class="btn btn-ghost" onclick="closeSheet(true)">Cancel</button>
-      <button class="btn btn-primary" onclick="saveProjFund()">Update</button>
+      <button class="btn btn-primary" onclick="saveProjFund()">Add Funding</button>
     </div>
   </div>
 </div>
@@ -2683,7 +2699,8 @@ function renderProjects() {
             <div style="display:flex;align-items:center;gap:8px">
               <div style="flex:1">
                 <div style="font-size:13px;font-weight:500;color:var(--text)">${item.name}</div>
-                <div style="font-size:11px;color:var(--muted)">${INR(item.allocated)} allocated of ${INR(item.required)} required</div>
+                <div style="font-size:11px;color:var(--muted)">${INR(item.allocated)} funded of ${INR(item.required)} required</div>
+                ${(item.fundHistory&&item.fundHistory.length>0)?`<div style="font-size:11px;color:var(--muted)">Last: ${FUND_SOURCE_LABEL[item.fundHistory[item.fundHistory.length-1].source]||'—'} · ${item.fundHistory[item.fundHistory.length-1].date}</div>`:''}
                 ${item.notes?`<div style="font-size:11px;color:var(--muted)">${item.notes}</div>`:''}
               </div>
               <div style="font-size:12px;font-weight:700;color:${id2?'var(--green)':col}">${ip.toFixed(0)}%</div>
@@ -2776,27 +2793,57 @@ function deleteProject(id){
   save(); safeRun(renderProjects,'renderProjects'); toast('🗑️ Project deleted');
 }
 
+const FUND_SOURCE_LABEL = {
+  savings:'💵 Savings/Cash', bank_transfer:'🏦 Bank Transfer',
+  rd_withdrawal:'📦 RD Withdrawal', sip_redemption:'📈 SIP Redemption',
+  fd_break:'🏛️ FD Break', salary:'💼 Salary', other:'💡 Other'
+};
+
 function openProjFundSheet(projId, itemId) {
   const p = D.projects.find(x=>x.id===projId); if(!p) return;
   const item = p.items.find(i=>i.id===itemId); if(!item) return;
-  document.getElementById('proj-fund-title').textContent = '💰 Fund: ' + item.name;
+  document.getElementById('proj-fund-title').textContent = '💰 ' + item.name;
+  const alloc = item.allocated || 0;
+  const remaining = Math.max(0, item.required - alloc);
   document.getElementById('proj-fund-subtitle').textContent =
-    'Required: ' + INR(item.required) + '  ·  Currently allocated: ' + INR(item.allocated);
+    INR(alloc) + ' funded of ' + INR(item.required) + ' · ' + INR(remaining) + ' remaining';
   document.getElementById('proj-fund-proj-id').value = projId;
   document.getElementById('proj-fund-item-id').value = itemId;
-  document.getElementById('proj-fund-allocated').value = item.allocated || '';
+  document.getElementById('proj-fund-amount').value = '';
+  document.getElementById('proj-fund-note').value = '';
+  document.getElementById('proj-fund-source').value = 'savings';
+  // Show last 5 funding history entries
+  const hist = item.fundHistory || [];
+  const histEl = document.getElementById('proj-fund-history');
+  if(hist.length > 0) {
+    histEl.innerHTML = `<div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;margin:14px 0 8px">Funding History</div>`
+      + hist.slice(-5).reverse().map(h=>`
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--surface2)">
+          <div>
+            <div style="font-size:13px;color:var(--text)">${FUND_SOURCE_LABEL[h.source]||h.source}</div>
+            <div style="font-size:11px;color:var(--muted)">${h.date}${h.note?' · '+h.note:''}</div>
+          </div>
+          <div style="font-size:14px;font-weight:700;color:var(--green)">+${INR(h.amount)}</div>
+        </div>`).join('');
+  } else { histEl.innerHTML = ''; }
   openSheet('sheet-proj-fund');
 }
 
 function saveProjFund() {
   const projId = document.getElementById('proj-fund-proj-id').value;
   const itemId = document.getElementById('proj-fund-item-id').value;
-  const newAlloc = +(document.getElementById('proj-fund-allocated').value || 0);
+  const amount = +(document.getElementById('proj-fund-amount').value || 0);
+  if(!amount || amount <= 0) { toast('⚠️ Enter an amount to add'); return; }
+  const source = document.getElementById('proj-fund-source').value;
+  const note = document.getElementById('proj-fund-note').value.trim();
   const p = D.projects.find(x=>x.id===projId); if(!p) return;
   const item = p.items.find(i=>i.id===itemId); if(!item) return;
-  item.allocated = newAlloc;
+  if(!item.fundHistory) item.fundHistory = [];
+  const today = new Date().toISOString().slice(0,10);
+  item.fundHistory.push({ date:today, amount, source, note });
+  item.allocated = item.fundHistory.reduce((s,h)=>s+h.amount, 0);
   save(); closeSheet(true); safeRun(renderProjects,'renderProjects');
-  toast('✅ Allocation updated — ' + INR(newAlloc) + ' / ' + INR(item.required));
+  toast('✅ +' + INR(amount) + ' via ' + (FUND_SOURCE_LABEL[source]||source));
 }
 
 function openProjItemSheet(projId, itemId){
@@ -4232,70 +4279,4 @@ function runSearch(raw) {
 
   D.needWant.forEach(n => {
     const hay = `${n.item} ${n.why||''}`.toLowerCase();
-    if (hay.includes(q)) results.push({
-      type:'nw', icon: n.type==='need'?'🟢':'🟡',
-      title: n.item, sub: n.why || (n.type==='need'?'Need':'Want'),
-      amt: n.amt ? INR(n.amt) : '', amtClass:'txt-green',
-      secLabel: n.type==='need'?'Need':'Want', secClass:'rs-nw',
-      action: ()=>{ closeSearch(); goTab('needwant'); }
-    });
-  });
-
-  D.salary.forEach(s => {
-    const hay = `${s.notes||''} ${s.src||''} ${s.type||''}`.toLowerCase();
-    if (hay.includes(q) || String(s.amt).includes(q)) results.push({
-      type:'sal', icon:'💰',
-      title: s.notes||s.src||'Income', sub: fmtDate(s.date),
-      amt: INR(s.amt), amtClass:'txt-green',
-      secLabel:'Income', secClass:'rs-sal',
-      action: ()=>{ closeSearch(); goTab('salary'); }
-    });
-  });
-
-  if (!results.length) {
-    el.innerHTML = `<div class="empty"><div class="empty-icon">🔍</div><div>No results for "<strong>${q}</strong>"</div></div>`;
-    return;
-  }
-  el.innerHTML = results.map(r => `
-    <div class="search-result-item" onclick="(${r.action.toString()})()">
-      <span class="sr-icon">${r.icon}</span>
-      <div class="sr-body">
-        <div class="sr-title">${highlight(r.title, q)}</div>
-        <div class="sr-sub">${r.sub}</div>
-      </div>
-      <div class="sr-right">
-        ${r.amt ? `<span class="${r.amtClass}">${r.amt}</span>` : ''}
-        <span class="badge ${r.secClass}">${r.secLabel}</span>
-      </div>
-    </div>`).join('');
-}
-
-// ════════════════════════════════════════════
-//  INIT
-// ════════════════════════════════════════════
-function safeRun(fn, name) {
-  try { fn(); } catch(e) { console.warn('render error in', name, e); }
-}
-function init() {
-  safeRun(load,'load');
-  safeRun(initDropdowns,'initDropdowns');
-  safeRun(initMonthFilter,'initMonthFilter');
-  safeRun(setTodayDates,'setTodayDates');
-  try { document.getElementById('main-content').scrollTop=0; } catch(e){}
-  safeRun(renderDashboard,'renderDashboard');
-  safeRun(renderExpList,'renderExpList');
-  safeRun(renderReminders,'renderReminders');
-  safeRun(renderCommitments,'renderCommitments');
-  safeRun(renderNW,'renderNW');
-  safeRun(renderSalary,'renderSalary');
-  safeRun(renderSplits,'renderSplits');
-  safeRun(renderUntracked,'renderUntracked');
-  safeRun(loadSettings,'loadSettings');
-  safeRun(checkAIKey,'checkAIKey');
-  safeRun(renderBudget,'renderBudget');
-  safeRun(renderTriathlon,'renderTriathlon');
-}
-window.addEventListener('load', init);
-</script>
-</body>
-</html>
+    if (hay.incl
