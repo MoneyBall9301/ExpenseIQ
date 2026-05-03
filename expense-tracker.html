@@ -802,81 +802,6 @@ mark { background:rgba(56,189,248,0.25); color:var(--accent); border-radius:3px;
   <div id="proj-list"></div>
 </div>
 
-
-
-<!-- PROJECT FUND bottom sheet -->
-<div class="bottom-sheet" id="sheet-proj-fund">
-  <div class="sheet-handle"></div>
-  <div class="sheet-header">
-    <span class="sheet-title" id="proj-fund-title">💰 Fund Item</span>
-    <button class="sheet-close" onclick="closeSheet(true)">✕</button>
-  </div>
-  <input type="hidden" id="proj-fund-proj-id">
-  <input type="hidden" id="proj-fund-item-id">
-  <div class="sheet-body">
-    <div style="font-size:13px;color:var(--muted);margin-bottom:14px" id="proj-fund-subtitle"></div>
-    <div class="form-row">
-      <label>Amount Adding Now (₹)</label>
-      <input type="number" id="proj-fund-amount" placeholder="0" inputmode="numeric">
-    </div>
-    <div class="form-row">
-      <label>Source</label>
-      <select id="proj-fund-source">
-        <option value="savings">💵 Savings / Cash</option>
-        <option value="bank_transfer">🏦 Bank Transfer</option>
-        <option value="rd_withdrawal">📦 RD Withdrawal</option>
-        <option value="sip_redemption">📈 SIP Redemption</option>
-        <option value="fd_break">🏛️ FD Break</option>
-        <option value="salary">💼 From Salary</option>
-        <option value="other">💡 Other</option>
-      </select>
-    </div>
-    <div class="form-row">
-      <label>Note (optional)</label>
-      <input type="text" id="proj-fund-note" placeholder="e.g. June salary savings">
-    </div>
-    <div id="proj-fund-history"></div>
-    <div class="btn-row">
-      <button class="btn btn-ghost" onclick="closeSheet(true)">Cancel</button>
-      <button class="btn btn-primary" onclick="saveProjFund()">Add Funding</button>
-    </div>
-  </div>
-</div>
-
-<div class="bottom-sheet" id="sheet-proj-item">
-  <div class="sheet-handle"></div>
-  <div class="sheet-header">
-    <span class="sheet-title" id="proj-item-sheet-title">Add Expense</span>
-    <button class="sheet-close" onclick="closeSheet(true)">✕</button>
-  </div>
-  <input type="hidden" id="proj-item-proj-id">
-  <input type="hidden" id="proj-item-edit-id">
-  <div class="sheet-body">
-    <div class="form-row">
-      <label>Expense Name</label>
-      <input type="text" id="proj-item-name" placeholder="e.g. Venue, Tuition, Down Payment…">
-    </div>
-    <div class="form-row" style="display:flex;gap:10px">
-      <div style="flex:1">
-        <label>Required (₹)</label>
-        <input type="number" id="proj-item-required" placeholder="0" inputmode="numeric">
-      </div>
-      <div style="flex:1">
-        <label>Allocated (₹)</label>
-        <input type="number" id="proj-item-allocated" placeholder="0" inputmode="numeric">
-      </div>
-    </div>
-    <div class="form-row">
-      <label>Notes (optional)</label>
-      <input type="text" id="proj-item-notes" placeholder="Any notes…">
-    </div>
-    <div class="btn-row">
-      <button class="btn btn-ghost" onclick="closeSheet(true)">Cancel</button>
-      <button class="btn btn-primary" onclick="saveProjectItem()">Save</button>
-    </div>
-  </div>
-</div>
-
 <!-- BUDGET PLANNER -->
 <div class="tab" id="tab-budget">
 
@@ -951,6 +876,81 @@ mark { background:rgba(56,189,248,0.25); color:var(--accent); border-radius:3px;
 
 <!-- SHEET OVERLAY -->
 <div class="sheet-overlay" id="sheet-overlay"></div>
+
+<!-- PROJECT FUND bottom sheet -->
+<div class="bottom-sheet" id="sheet-proj-fund">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header">
+    <span class="sheet-title" id="proj-fund-title">💰 Fund Item</span>
+    <button class="sheet-close" onclick="closeSheet(true)">✕</button>
+  </div>
+  <input type="hidden" id="proj-fund-proj-id">
+  <input type="hidden" id="proj-fund-item-id">
+  <div class="sheet-body">
+    <div style="font-size:13px;color:var(--muted);margin-bottom:14px" id="proj-fund-subtitle"></div>
+    <div class="form-row">
+      <label>Amount Adding Now (₹)</label>
+      <input type="number" id="proj-fund-amount" placeholder="0" inputmode="numeric">
+    </div>
+    <div class="form-row">
+      <label>Source</label>
+      <select id="proj-fund-source">
+        <option value="savings">💵 Savings / Cash</option>
+        <option value="bank_transfer">🏦 Bank Transfer</option>
+        <option value="rd_withdrawal">📦 RD Withdrawal</option>
+        <option value="sip_redemption">📈 SIP Redemption</option>
+        <option value="fd_break">🏛️ FD Break</option>
+        <option value="salary">💼 From Salary</option>
+        <option value="other">💡 Other</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label>Note (optional)</label>
+      <input type="text" id="proj-fund-note" placeholder="e.g. June salary savings">
+    </div>
+    <div id="proj-fund-history"></div>
+    <div class="btn-row">
+      <button class="btn btn-ghost" onclick="closeSheet(true)">Cancel</button>
+      <button class="btn btn-primary" onclick="saveProjFund()">Add Funding</button>
+    </div>
+  </div>
+</div>
+
+<div class="bottom-sheet" id="sheet-proj-item">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header">
+    <span class="sheet-title" id="proj-item-sheet-title">Add Expense</span>
+    <button class="sheet-close" onclick="closeSheet(true)">✕</button>
+  </div>
+  <input type="hidden" id="proj-item-proj-id">
+  <input type="hidden" id="proj-item-edit-id">
+  <div class="sheet-body">
+    <div class="form-row">
+      <label>Expense Name</label>
+      <input type="text" id="proj-item-name" placeholder="e.g. Venue, Tuition, Down Payment…">
+    </div>
+    <div class="form-row" style="display:flex;gap:10px">
+      <div style="flex:1">
+        <label>Required (₹)</label>
+        <input type="number" id="proj-item-required" placeholder="0" inputmode="numeric">
+      </div>
+      <div style="flex:1">
+        <label>Allocated (₹)</label>
+        <input type="number" id="proj-item-allocated" placeholder="0" inputmode="numeric">
+      </div>
+    </div>
+    <div class="form-row">
+      <label>Notes (optional)</label>
+      <input type="text" id="proj-item-notes" placeholder="Any notes…">
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-ghost" onclick="closeSheet(true)">Cancel</button>
+      <button class="btn btn-primary" onclick="saveProjectItem()">Save</button>
+    </div>
+  </div>
+</div>
+
+
 
 <div class="bottom-sheet" id="sheet-cc-card">
   <div class="sheet-handle"></div>
