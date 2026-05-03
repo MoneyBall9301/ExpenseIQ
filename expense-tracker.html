@@ -794,7 +794,16 @@ mark { background:rgba(56,189,248,0.25); color:var(--accent); border-radius:3px;
       <div class="more-icon">🎯</div>
       <div class="more-label" style="color:#fbbf24">Projects</div>
     </div>
+    <div class="more-item" onclick="goTab('bulkimport')" style="border-color:rgba(34,197,94,0.4);background:rgba(34,197,94,0.05);grid-column:1/-1">
+      <div class="more-icon">📥</div>
+      <div class="more-label" style="color:var(--green)">Bulk Import</div>
+    </div>
   </div>
+</div>
+
+<!-- BULK IMPORT -->
+<div class="tab" id="tab-bulkimport">
+  <div id="bulkimport-content"></div>
 </div>
 
 <!-- PROJECTS -->
@@ -1499,7 +1508,7 @@ const TAB_TITLES = {
   dashboard:'🐷 ExpenseIQ', expenses:'📋 Expenses', reminders:'🔔 Reminders',
   commitments:'💼 Commitments', needwant:'📋 Need / Want', salary:'💰 Salary',
   splits:'🤝 Splits & IOUs', ai:'🤖 AI Assistant', untracked:'🗂️ Untracked',
-  settings:'⚙️ Settings', more:'☰ More', budget:'🎯 Budget Planner', projects:'🎯 Projects'
+  settings:'⚙️ Settings', more:'☰ More', budget:'🎯 Budget Planner', projects:'🎯 Projects', bulkimport:'📥 Bulk Import'
 };
 
 
@@ -1565,7 +1574,7 @@ function goTab(id) {
   const fabMap = {
     dashboard:null, expenses:'sheet-expense', reminders:'sheet-reminder',
     commitments:'sheet-commitment', needwant:'sheet-needwant', salary:'sheet-salary',
-    splits:'sheet-split', untracked:'sheet-untracked', ai:null, settings:null, more:null, budget:null, projects:null
+    splits:'sheet-split', untracked:'sheet-untracked', ai:null, settings:null, more:null, budget:null, projects:null, bulkimport:null
   };
   const fab = document.getElementById('fab-btn');
   const target = fabMap[id];
@@ -1577,7 +1586,7 @@ function goTab(id) {
     dashboard:renderDashboard, expenses:renderExpList, reminders:renderReminders,
     commitments:renderCommitments, needwant:renderNW, salary:renderSalary,
     splits:renderSplits, untracked:renderUntracked, ai:checkAIKey, settings:loadSettings,
-    budget:renderBudget, projects:renderProjects
+    budget:renderBudget, projects:renderProjects, bulkimport:renderBulkImport
   };
   if(renders[id]) safeRun(renders[id], id);
   try { document.getElementById('main-content').scrollTop=0; } catch(e){}
@@ -4214,6 +4223,193 @@ function importJSONPaste() {
     document.getElementById('imp-paste-section').style.display='none';
     document.getElementById('imp-btn-row').style.display='flex';
   } catch(err){toast('❌ Invalid JSON — check you copied the whole file','err');}
+}
+
+
+// ════════════════════════════════════════════
+//  BULK IMPORT
+// ════════════════════════════════════════════
+const BULK_TEMPLATE = {
+  expenses: [
+    {
+      date: "2026-05-01",
+      desc: "Grocery run",
+      amt: 1200,
+      cat: "Groceries",
+      txtype: "upi",
+      avoid: "no",
+      why: ""
+    },
+    {
+      date: "2026-05-02",
+      desc: "Swiggy dinner",
+      amt: 350,
+      cat: "Food Delivery",
+      txtype: "credit_card",
+      avoid: "yes",
+      why: "Lazy evening"
+    }
+  ],
+  salary: [
+    {
+      date: "2026-05-01",
+      desc: "May salary",
+      amt: 85000,
+      txtype: "bank_transfer"
+    }
+  ]
+};
+
+const VALID_CATS = CATS.map(c => c.n);
+const VALID_TXTYPES = ['upi','cash','bank_transfer','credit_card','auto_mandate'];
+const VALID_AVOID = ['yes','no','maybe'];
+
+function renderBulkImport() {
+  const el = document.getElementById('bulkimport-content');
+  if (!el) return;
+  el.innerHTML = `
+    <div class="card">
+      <div class="card-title">📥 Bulk Import</div>
+      <p style="font-size:13px;color:var(--muted);margin:0 0 14px">
+        Paste a JSON list of expenses (and optionally salary entries) below. 
+        Use the template as a guide — only <b style="color:var(--text)">date, desc, amt, cat</b> are required.
+      </p>
+      <button class="btn btn-ghost" style="margin-bottom:14px;width:100%" onclick="copyBulkTemplate()">📋 Copy Template JSON</button>
+
+      <div class="form-row">
+        <label>Valid Categories</label>
+        <div style="font-size:11px;color:var(--muted);line-height:1.8;background:var(--surface2);border-radius:8px;padding:10px">
+          ${VALID_CATS.map(c => `<span style="display:inline-block;margin:2px 4px 2px 0;background:var(--bg);border-radius:4px;padding:2px 6px">${c}</span>`).join('')}
+        </div>
+      </div>
+
+      <div class="form-row">
+        <label>Payment Types</label>
+        <div style="font-size:12px;color:var(--muted)">upi · cash · bank_transfer · credit_card · auto_mandate</div>
+      </div>
+      <div class="form-row">
+        <label>Avoidable</label>
+        <div style="font-size:12px;color:var(--muted)">yes · no · maybe</div>
+      </div>
+
+      <div class="form-row">
+        <label>Paste JSON here</label>
+        <textarea id="bulk-paste" placeholder='Paste your JSON here…' style="min-height:180px;font-size:12px;font-family:monospace"></textarea>
+      </div>
+
+      <div id="bulk-preview" style="margin-bottom:14px"></div>
+
+      <div class="btn-row">
+        <button class="btn btn-ghost" onclick="previewBulkImport()">🔍 Preview</button>
+        <button class="btn btn-primary" onclick="confirmBulkImport()">📥 Import All</button>
+      </div>
+    </div>
+  `;
+}
+
+function copyBulkTemplate() {
+  const txt = JSON.stringify(BULK_TEMPLATE, null, 2);
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(txt).then(() => toast('📋 Template copied!')).catch(() => fallbackCopy(txt));
+  } else { fallbackCopy(txt); }
+}
+
+function fallbackCopy(txt) {
+  const ta = document.getElementById('bulk-paste');
+  if (ta) { ta.value = txt; toast('📋 Template pasted into the box — edit and import'); }
+}
+
+function parseBulkJSON() {
+  const raw = (document.getElementById('bulk-paste')?.value || '').trim();
+  if (!raw) throw new Error('Nothing pasted yet');
+  let data;
+  try { data = JSON.parse(raw); } catch(e) { throw new Error('Invalid JSON — ' + e.message); }
+  // Accept bare array (just expenses) or object with expenses/salary keys
+  if (Array.isArray(data)) data = { expenses: data };
+  return data;
+}
+
+function parsedToRows(data) {
+  const errors = [], expRows = [], salRows = [];
+  const today = new Date().toISOString().slice(0,10);
+
+  (data.expenses || []).forEach((e, i) => {
+    const row = { n: i+1 };
+    if (!e.date || !/^\d{4}-\d{2}-\d{2}$/.test(e.date)) { errors.push(`Expense #${i+1}: invalid date "${e.date}" — use YYYY-MM-DD`); return; }
+    if (!e.desc || !String(e.desc).trim()) { errors.push(`Expense #${i+1}: missing desc`); return; }
+    if (!e.amt || isNaN(+e.amt) || +e.amt <= 0) { errors.push(`Expense #${i+1}: invalid amt "${e.amt}"`); return; }
+    if (!e.cat || !VALID_CATS.includes(e.cat)) { errors.push(`Expense #${i+1}: unknown cat "${e.cat}"`); return; }
+    expRows.push({
+      id: uid(), date: e.date, desc: String(e.desc).trim(), amt: +e.amt,
+      cat: e.cat, txtype: VALID_TXTYPES.includes(e.txtype) ? e.txtype : 'upi',
+      avoid: VALID_AVOID.includes(e.avoid) ? e.avoid : 'no',
+      why: e.why || ''
+    });
+  });
+
+  (data.salary || []).forEach((s, i) => {
+    if (!s.date || !/^\d{4}-\d{2}-\d{2}$/.test(s.date)) { errors.push(`Salary #${i+1}: invalid date`); return; }
+    if (!s.amt || isNaN(+s.amt) || +s.amt <= 0) { errors.push(`Salary #${i+1}: invalid amt`); return; }
+    salRows.push({
+      id: uid(), date: s.date, desc: s.desc || 'Salary', amt: +s.amt,
+      txtype: VALID_TXTYPES.includes(s.txtype) ? s.txtype : 'bank_transfer'
+    });
+  });
+
+  return { expRows, salRows, errors };
+}
+
+function previewBulkImport() {
+  const el = document.getElementById('bulk-preview');
+  if (!el) return;
+  try {
+    const data = parseBulkJSON();
+    const { expRows, salRows, errors } = parsedToRows(data);
+    let html = '';
+    if (errors.length) {
+      html += `<div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:10px;padding:12px;margin-bottom:10px">
+        <div style="font-size:12px;font-weight:700;color:var(--red);margin-bottom:6px">⚠️ ${errors.length} error(s) — fix before importing:</div>
+        ${errors.map(e=>`<div style="font-size:11px;color:var(--red);margin-bottom:3px">• ${e}</div>`).join('')}
+      </div>`;
+    }
+    if (expRows.length) {
+      html += `<div style="font-size:12px;font-weight:700;color:var(--green);margin-bottom:8px">✅ ${expRows.length} expense(s) ready</div>`;
+      html += expRows.slice(0,5).map(e=>`
+        <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--surface2);font-size:12px">
+          <div><span style="color:var(--muted)">${e.date}</span> · ${e.desc} <span style="color:var(--muted)">[${e.cat}]</span></div>
+          <div style="font-weight:700;color:var(--red)">${INR(e.amt)}</div>
+        </div>`).join('');
+      if (expRows.length > 5) html += `<div style="font-size:11px;color:var(--muted);padding:6px 0">…and ${expRows.length-5} more</div>`;
+    }
+    if (salRows.length) {
+      html += `<div style="font-size:12px;font-weight:700;color:var(--green);margin:10px 0 8px">✅ ${salRows.length} salary entry/entries ready</div>`;
+      html += salRows.map(s=>`
+        <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--surface2);font-size:12px">
+          <div><span style="color:var(--muted)">${s.date}</span> · ${s.desc}</div>
+          <div style="font-weight:700;color:var(--green)">${INR(s.amt)}</div>
+        </div>`).join('');
+    }
+    if (!expRows.length && !salRows.length && !errors.length) html = `<div style="color:var(--muted);font-size:13px">No valid rows found.</div>`;
+    el.innerHTML = html;
+  } catch(e) { el.innerHTML = `<div style="color:var(--red);font-size:13px">❌ ${e.message}</div>`; }
+}
+
+function confirmBulkImport() {
+  try {
+    const data = parseBulkJSON();
+    const { expRows, salRows, errors } = parsedToRows(data);
+    if (errors.length) { toast('⚠️ Fix ' + errors.length + ' error(s) first — tap Preview', 'err'); return; }
+    if (!expRows.length && !salRows.length) { toast('⚠️ Nothing to import','err'); return; }
+    if (!confirm(`Import ${expRows.length} expense(s) and ${salRows.length} salary entry/entries?`)) return;
+    D.expenses.push(...expRows);
+    D.salary.push(...salRows);
+    save();
+    safeRun(renderDashboard, 'renderDashboard');
+    safeRun(renderExpList, 'renderExpList');
+    document.getElementById('bulk-paste').value = '';
+    document.getElementById('bulk-preview').innerHTML = '';
+    toast('✅ Imported ' + expRows.length + ' expense(s) + ' + salRows.length + ' salary entry/entries!');
+  } catch(e) { toast('❌ ' + e.message, 'err'); }
 }
 
 // ════════════════════════════════════════════

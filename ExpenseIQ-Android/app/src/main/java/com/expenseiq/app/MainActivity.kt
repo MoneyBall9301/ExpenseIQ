@@ -197,4 +197,268 @@ class MainActivity : AppCompatActivity() {
         ).apply {
             description = "Spend limit alerts, daily summaries, and financial warnings"
         }
-  
+        val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        nm.createNotificationChannel(channel)
+    }
+
+    // ── Back button navigates within WebView ──────────────────────
+    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        if (keyCode == KeyEvent.KEYCODE_BACK && webView.canGoBack()) {
+            webView.goBack()
+            return true
+        }
+        return super.onKeyDown(keyCode, event)
+    }
+
+    // ── JavaScript ↔ Kotlin bridge ────────────────────────────────
+    inner class AndroidBridge(private val ctx: Context) {
+
+        /** Save CSV / JSON downloads to the Downloads folder */
+        @JavascriptInterface
+        fun saveFile(filename: String, base64Data: String, mimeType: String) {
+            try {
+                val bytes = Base64.decode(base64Data, Base64.DEFAULT)
+                val values = ContentValues().apply {
+                    put(MediaStore.Downloads.DISPLAY_NAME, filename)
+                    put(MediaStore.Downloads.MIME_TYPE, mimeType)
+                    put(MediaStore.Downloads.IS_PENDING, 1)
+                }
+                val resolver = ctx.contentResolver
+                val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+                uri?.let {
+                    resolver.openOutputStream(it)?.use { stream -> stream.write(bytes) }
+                    values.clear()
+                    values.put(MediaStore.Downloads.IS_PENDING, 0)
+                    resolver.update(it, values, null, null)
+                    runOnUiThread {
+                        Toast.makeText(ctx, "✅ Saved to Downloads: $filename", Toast.LENGTH_LONG).show()
+                    }
+                }
+            } catch (e: Exception) {
+                runOnUiThread {
+                    Toast.makeText(ctx, "❌ Save failed: ${e.message}", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+
+        /** Write a full HTML update to internal storage */
+        @JavascriptInterface
+        fun writeUpdateHtml(content: String) {
+            try {
+                val file = File(ctx.filesDir, UPDATE_FILENAME)
+                file.writeText(content, Charsets.UTF_8)
+                runOnUiThread {
+                    Toast.makeText(ctx, "✅ Update saved! Close & reopen app to apply.", Toast.LENGTH_LONG).show()
+                }
+            } catch (e: Exception) {
+                runOnUiThread {
+                    Toast.makeText(ctx, "❌ Update save failed: ${e.message}", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+
+        /** Check whether a downloaded update is active */
+        @JavascriptInterface
+        fun hasUpdate(): Boolean = File(ctx.filesDir, UPDATE_FILENAME).exists()
+
+        /** Return ISO timestamp of the saved update, or "" if none */
+        @JavascriptInterface
+        fun updateTimestamp(): String {
+            val file = File(ctx.filesDir, UPDATE_FILENAME)
+            return if (file.exists()) java.util.Date(file.lastModified()).toString() else ""
+        }
+
+        /** Delete the stored update — reverts to bundled version on next launch */
+        @JavascriptInterface
+        fun clearUpdate() {
+            val file = File(ctx.filesDir, UPDATE_FILENAME)
+            val deleted = file.delete()
+            runOnUiThread {
+                Toast.makeText(
+                    ctx,
+                    if (deleted) "✅ Update cleared. Bundled version loads on next restart."
+                    else "ℹ️ No update file to clear.",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+
+        // ── Notification bridge methods ───────────────────────────
+
+        /** Check if notification permission is granted */
+        @JavascriptInterface
+        fun hasNotificationPermission(): Boolean =
+            NotificationManagerCompat.from(ctx).areNotificationsEnabled()
+
+        /** Request notification permission (Android 13+); on older versions auto-granted */
+        @JavascriptInterface
+        fun requestNotificationPermission() {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                runOnUiThread {
+                    notifPermLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                }
+            } else {
+                // Pre-Android 13: permission is granted at install time
+                webView.post {
+                    webView.evaluateJavascript("if(window.onNotifPermResult)window.onNotifPermResult(true);", null)
+                }
+            }
+        }
+
+        /** Show an immediate notification — called from JS for critical warnings */
+        @JavascriptInterface
+        fun showNotification(title: String, body: String, notifId: Int) {
+            if (!NotificationManagerCompat.from(ctx).areNotificationsEnabled()) return
+            val prefs = ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val heatScore = prefs.getInt("heat_score", 0)
+            val heatLabel = prefs.getString("heat_label", "") ?: ""
+            val openIntent = Intent(ctx, MainActivity::class.java)
+            val pi = PendingIntent.getActivity(
+                ctx, notifId, openIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            val fullBody = if (heatLabel.isNotEmpty()) "$body\n🌡️ Spending Heat: $heatLabel ($heatScore/100)" else body
+            val notif = NotificationCompat.Builder(ctx, CHANNEL_ID)
+                .setSmallIcon(android.R.drawable.ic_dialog_info)
+                .setContentTitle(title)
+                .setContentText(body)
+                .setStyle(NotificationCompat.BigTextStyle().bigText(fullBody))
+                .setProgress(100, heatScore, false)
+                .setColor(heatColor(heatScore))
+                .setColorized(true)
+                .setContentIntent(pi)
+                .setAutoCancel(true)
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                .build()
+            try {
+                NotificationManagerCompat.from(ctx).notify(notifId, notif)
+            } catch (e: SecurityException) {
+                // Permission not granted — silently ignore
+            }
+        }
+
+        /** Store the current warning summary + heat score so daily alarm can show it */
+        @JavascriptInterface
+        fun updateNotificationData(warnCount: Int, topWarning: String) {
+            ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
+                .putInt("warn_count", warnCount)
+                .putString("top_warn", topWarning)
+                .apply()
+        }
+
+        /** Store heat score separately — called from renderHeatBar */
+        @JavascriptInterface
+        fun updateHeatScore(score: Int, label: String) {
+            ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
+                .putInt("heat_score", score)
+                .putString("heat_label", label)
+                .apply()
+        }
+
+        /**
+         * Show/update the persistent pinned notification — cannot be swiped away.
+         * Called from renderHeatBar every time the dashboard loads.
+         */
+        @JavascriptInterface
+        fun showPersistentStatus(title: String, body: String, heatScore: Int) {
+            if (!NotificationManagerCompat.from(ctx).areNotificationsEnabled()) return
+            val color = heatColor(heatScore)
+            val openIntent = Intent(ctx, MainActivity::class.java)
+            val pi = PendingIntent.getActivity(
+                ctx, 999, openIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            val notif = NotificationCompat.Builder(ctx, CHANNEL_ID)
+                .setSmallIcon(android.R.drawable.ic_dialog_info)
+                .setContentTitle(title)
+                .setContentText(body)
+                .setStyle(NotificationCompat.BigTextStyle().bigText(body))
+                .setProgress(100, heatScore, false)
+                .setColor(color)           // tints icon & accent strip to heat colour
+                .setColorized(true)        // applies colour to notification background
+                .setContentIntent(pi)
+                .setSilent(true)           // no sound/vibration on update
+                .setPriority(NotificationCompat.PRIORITY_LOW)
+                .build()
+            try {
+                NotificationManagerCompat.from(ctx).notify(1000, notif)
+            } catch (e: SecurityException) { /* silently ignore */ }
+        }
+
+        /** Map heat score 0–100 to a colour int (green → yellow → orange → red) */
+        private fun heatColor(score: Int): Int = when {
+            score <= 15 -> android.graphics.Color.parseColor("#22c55e") // green
+            score <= 30 -> android.graphics.Color.parseColor("#4ade80") // light green
+            score <= 50 -> android.graphics.Color.parseColor("#facc15") // yellow
+            score <= 70 -> android.graphics.Color.parseColor("#fb923c") // orange
+            score <= 85 -> android.graphics.Color.parseColor("#ef4444") // red
+            else        -> android.graphics.Color.parseColor("#dc2626") // deep red
+        }
+
+        /**
+         * Schedule a daily reminder notification at the given hour:minute (24h).
+         * Persists across reboots via the alarm being rescheduled by NotificationReceiver.
+         */
+        @JavascriptInterface
+        fun scheduleDailyReminder(hour: Int, minute: Int) {
+            val prefs = ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            prefs.edit().putInt("notif_hour", hour).putInt("notif_minute", minute)
+                .putBoolean("daily_enabled", true).apply()
+
+            val cal = Calendar.getInstance().apply {
+                set(Calendar.HOUR_OF_DAY, hour)
+                set(Calendar.MINUTE, minute)
+                set(Calendar.SECOND, 0)
+                if (timeInMillis <= System.currentTimeMillis())
+                    add(Calendar.DAY_OF_YEAR, 1)  // schedule for tomorrow if time already passed
+            }
+            val am = ctx.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            val pi = PendingIntent.getBroadcast(
+                ctx, 0,
+                Intent(ctx, NotificationReceiver::class.java),
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            try {
+                am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, cal.timeInMillis, pi)
+                runOnUiThread {
+                    Toast.makeText(ctx, "🔔 Daily reminder set for ${hour.toString().padStart(2,'0')}:${minute.toString().padStart(2,'0')}", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                am.set(AlarmManager.RTC_WAKEUP, cal.timeInMillis, pi)
+            }
+        }
+
+        /** Cancel the daily reminder */
+        @JavascriptInterface
+        fun cancelDailyReminder() {
+            ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
+                .putBoolean("daily_enabled", false).apply()
+            val am = ctx.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            val pi = PendingIntent.getBroadcast(
+                ctx, 0,
+                Intent(ctx, NotificationReceiver::class.java),
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            am.cancel(pi)
+            runOnUiThread {
+                Toast.makeText(ctx, "🔕 Daily reminder cancelled.", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        /** Returns true if the daily reminder is currently scheduled */
+        @JavascriptInterface
+        fun isDailyReminderEnabled(): Boolean =
+            ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .getBoolean("daily_enabled", false)
+
+        /** Returns "HH:MM" of the scheduled time, or "" if not set */
+        @JavascriptInterface
+        fun getDailyReminderTime(): String {
+            val prefs = ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            if (!prefs.getBoolean("daily_enabled", false)) return ""
+            val h = prefs.getInt("notif_hour", 20).toString().padStart(2, '0')
+            val m = prefs.getInt("notif_minute", 0).toString().padStart(2, '0')
+            return "$h:$m"
+        }
+    }
+}
